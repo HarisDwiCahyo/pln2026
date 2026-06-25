@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kuesioner Aspirasi — Ultah Kantor CESGS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+:root{
+  --teal:#0d9488; --teal-d:#0f766e; --teal-l:#ccfbf1;
+  --ink:#0f172a; --slate:#64748b; --border:#e2e8f0;
+  --bg:#eef2f6; --white:#fff; --amber:#b45309; --amber-l:#fef3c7;
+  --r:14px; --sh:0 1px 3px rgba(0,0,0,.06),0 6px 18px rgba(0,0,0,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.5;padding:0 0 60px}
+.wrap{max-width:720px;margin:0 auto;padding:0 14px}
+
+/* hero */
+.hero{background:linear-gradient(135deg,var(--teal) 0%,var(--teal-d) 100%);color:#fff;padding:26px 22px;border-radius:0 0 var(--r) var(--r);box-shadow:var(--sh);text-align:center}
+.hero h1{font-size:1.35rem;font-weight:800;letter-spacing:.2px}
+.hero p{opacity:.9;font-size:.85rem;margin-top:6px}
+.hint{background:var(--amber-l);color:var(--amber);font-size:.8rem;font-weight:600;border-radius:10px;padding:10px 14px;margin:16px 0;text-align:center}
+
+/* card */
+.q{background:var(--white);border-radius:var(--r);box-shadow:var(--sh);padding:16px 18px;margin-bottom:14px}
+.q .num{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font-size:.72rem;font-weight:800;margin-right:8px;vertical-align:middle}
+.q h3{display:inline;font-size:.98rem;font-weight:700}
+.q .sub{color:var(--slate);font-size:.78rem;margin:6px 0 0 32px}
+
+/* options as chips */
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0 0}
+.chip{position:relative;cursor:pointer}
+.chip input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.chip span{display:inline-block;border:1.6px solid var(--border);border-radius:999px;padding:8px 14px;font-size:.85rem;font-weight:500;transition:.15s;user-select:none;background:#fff}
+.chip:hover span{border-color:var(--teal)}
+.chip input:checked+span{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600}
+
+/* scale */
+.scale{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.scale .lab{font-size:.74rem;color:var(--slate);font-weight:600}
+.scale .nums{display:flex;gap:7px}
+.scale .chip span{border-radius:50%;width:40px;height:40px;display:grid;place-items:center;padding:0;font-weight:700}
+
+/* own input */
+.own{margin-top:11px;display:flex;align-items:center;gap:8px}
+.own label{font-size:.78rem;color:var(--slate);font-weight:600;white-space:nowrap}
+.own input{flex:1;border:1.5px solid var(--border);border-radius:10px;padding:8px 11px;font-family:inherit;font-size:.85rem;background:#fbfdfe;transition:.15s}
+.own input:focus{outline:none;border-color:var(--teal);background:#fff;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+textarea{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:.88rem;margin-top:10px;min-height:70px;resize:vertical;background:#fbfdfe}
+textarea:focus{outline:none;border-color:var(--teal);background:#fff;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+
+/* name */
+.name input{width:100%;border:1.6px solid var(--border);border-radius:10px;padding:11px 13px;font-family:inherit;font-size:.95rem;margin-top:6px;background:#fbfdfe}
+.name input:focus{outline:none;border-color:var(--teal);background:#fff;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+
+.actions{display:flex;gap:10px;margin-top:18px}
+.btn{flex:1;border:none;border-radius:12px;padding:13px;font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;transition:.15s}
+.btn-p{background:var(--teal);color:#fff}.btn-p:hover{background:var(--teal-d)}
+.btn-s{background:#fff;color:var(--teal);border:1.6px solid var(--teal)}
+.foot{text-align:center;color:var(--slate);font-size:.78rem;margin-top:18px}
+.btn-drive{flex:1.4;border:1.6px solid #1a73e8;background:#fff;color:#1a73e8;border-radius:12px;padding:13px;font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s}
+.btn-drive:hover{background:#1a73e8;color:#fff}
+.btn-drive:disabled{opacity:.55;cursor:not-allowed}
+.spin{width:15px;height:15px;border:2.5px solid rgba(26,115,232,.3);border-top-color:#1a73e8;border-radius:50%;display:inline-block;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.dstatus{display:none;margin-top:12px;padding:12px 15px;border-radius:11px;font-size:.85rem;font-weight:600;line-height:1.5}
+.dstatus.ok{display:block;background:#dcfce7;color:#15803d;border:1.5px solid #bbf7d0}
+.dstatus.err{display:block;background:#fee2e2;color:#b91c1c;border:1.5px solid #fca5a5}
+.dstatus.send{display:flex;align-items:center;gap:9px;background:#eff6ff;color:#1a73e8;border:1.5px solid #bfdbfe}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>🎉 Aspirasi Ultah Kantor</h1>
+  <p>CESGS · isi santai &amp; cepat — boleh centang, boleh tulis sendiri</p>
+</div>
+
+<div class="wrap">
+  <div class="hint">Tahap ini menangkap arah umum tiap divisi. Pilihan spesifik (game/hiburan/gaya) diputuskan nanti di forum besar.</div>
+
+  <form>
+  <!-- NAMA -->
+  <div class="q name">
+    <span class="num">•</span><h3>Nama</h3>
+    <input type="text" placeholder="Nama kamu…">
+  </div>
+
+  <!-- Q1 -->
+  <div class="q">
+    <span class="num">1</span><h3>Energi acara yang kamu mau</h3>
+    <div class="scale">
+      <span class="lab">Tenang</span>
+      <div class="nums">
+        <label class="chip"><input type="radio" name="q1"><span>1</span></label>
+        <label class="chip"><input type="radio" name="q1"><span>2</span></label>
+        <label class="chip"><input type="radio" name="q1"><span>3</span></label>
+        <label class="chip"><input type="radio" name="q1"><span>4</span></label>
+        <label class="chip"><input type="radio" name="q1"><span>5</span></label>
+      </div>
+      <span class="lab">Meriah</span>
+    </div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="q">
+    <span class="num">2</span><h3>2 hal yang paling kamu cari</h3>
+    <p class="sub">pilih sampai 2</p>
+    <div class="opts">
+      <label class="chip"><input type="checkbox"><span>Seru-seruan</span></label>
+      <label class="chip"><input type="checkbox"><span>Akrab antar-tim</span></label>
+      <label class="chip"><input type="checkbox"><span>Merasa dihargai</span></label>
+      <label class="chip"><input type="checkbox"><span>Santai / istirahat</span></label>
+      <label class="chip"><input type="checkbox"><span>Bermakna</span></label>
+      <label class="chip"><input type="checkbox"><span>Makan enak</span></label>
+    </div>
+    <div class="own"><label>✏️ Lainnya:</label><input type="text" placeholder="tulis sendiri…"></div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="q">
+    <span class="num">3</span><h3>Lokasi acara</h3>
+    <div class="opts">
+      <label class="chip"><input type="radio" name="q3"><span>Di kantor / kampus</span></label>
+      <label class="chip"><input type="radio" name="q3"><span>Ke luar (villa/pantai/outbound)</span></label>
+    </div>
+    <div class="own"><label>✏️ Lainnya:</label><input type="text" placeholder="tulis sendiri…"></div>
+  </div>
+
+  <!-- Q4 -->
+  <div class="q">
+    <span class="num">4</span><h3>Nuansa</h3>
+    <div class="opts">
+      <label class="chip"><input type="radio" name="q4"><span>Santai-kasual</span></label>
+      <label class="chip"><input type="radio" name="q4"><span>Semi-formal / rapi</span></label>
+    </div>
+    <div class="own"><label>✏️ Lainnya:</label><input type="text" placeholder="tulis sendiri…"></div>
+  </div>
+
+  <!-- Q5 -->
+  <div class="q">
+    <span class="num">5</span><h3>Waktu</h3>
+    <div class="opts">
+      <label class="chip"><input type="radio" name="q5"><span>Siang (jam kerja)</span></label>
+      <label class="chip"><input type="radio" name="q5"><span>Sore–malam</span></label>
+      <label class="chip"><input type="radio" name="q5"><span>Akhir pekan</span></label>
+    </div>
+    <div class="own"><label>✏️ Lainnya:</label><input type="text" placeholder="tulis sendiri…"></div>
+  </div>
+
+  <!-- Q6 -->
+  <div class="q">
+    <span class="num">6</span><h3>Durasi ideal</h3>
+    <div class="opts">
+      <label class="chip"><input type="radio" name="q6"><span>1–2 jam</span></label>
+      <label class="chip"><input type="radio" name="q6"><span>Setengah hari</span></label>
+      <label class="chip"><input type="radio" name="q6"><span>Sehari penuh</span></label>
+    </div>
+    <div class="own"><label>✏️ Lainnya:</label><input type="text" placeholder="tulis sendiri…"></div>
+  </div>
+
+  <!-- Q7 -->
+  <div class="q">
+    <span class="num">7</span><h3>Ruh acara</h3>
+    <p class="sub">pilih sampai 2 — gaya tampilan diputuskan belakangan</p>
+    <div class="opts">
+      <label class="chip"><input type="checkbox"><span>Syukur &amp; Apresiasi</span></label>
+      <label class="chip"><input type="checkbox"><span>Kilas Balik &amp; Harapan</span></label>
+      <label class="chip"><input type="checkbox"><span>Tumbuh Bersama</span></label>
+      <label class="chip"><input type="checkbox"><span>Kekeluargaan</span></label>
+      <label class="chip"><input type="checkbox"><span>Santai &amp; Lepas Penat</span></label>
+      <label class="chip"><input type="checkbox"><span>Satu Tim / Kolaborasi</span></label>
+    </div>
+    <div class="own"><label>✏️ Lainnya:</label><input type="text" placeholder="tulis sendiri…"></div>
+  </div>
+
+  <!-- Q8 -->
+  <div class="q">
+    <span class="num">8</span><h3>Kegiatan inti yang kamu inginkan</h3>
+    <div class="opts">
+      <label class="chip"><input type="checkbox"><span>Games / lomba</span></label>
+      <label class="chip"><input type="checkbox"><span>Hiburan / panggung</span></label>
+      <label class="chip"><input type="checkbox"><span>Ngobrol santai</span></label>
+      <label class="chip"><input type="checkbox"><span>Kegiatan bermakna</span></label>
+    </div>
+    <div class="own"><label>✏️ Lainnya:</label><input type="text" placeholder="tulis sendiri…"></div>
+  </div>
+
+  <!-- Q9 -->
+  <div class="q">
+    <span class="num">9</span><h3>Seberapa banyak games / lomba?</h3>
+    <div class="scale">
+      <span class="lab">Sedikit</span>
+      <div class="nums">
+        <label class="chip"><input type="radio" name="q9"><span>1</span></label>
+        <label class="chip"><input type="radio" name="q9"><span>2</span></label>
+        <label class="chip"><input type="radio" name="q9"><span>3</span></label>
+        <label class="chip"><input type="radio" name="q9"><span>4</span></label>
+        <label class="chip"><input type="radio" name="q9"><span>5</span></label>
+      </div>
+      <span class="lab">Banyak</span>
+    </div>
+    <div class="own"><label>✏️ Catatan:</label><input type="text" placeholder="tulis sendiri…"></div>
+  </div>
+
+  <!-- Q10 -->
+  <div class="q">
+    <span class="num">10</span><h3>Sentuhan berbagi / sosial <span style="font-weight:500;color:var(--slate);font-size:.8rem">(opsional)</span></h3>
+    <div class="scale">
+      <span class="lab">Lewati</span>
+      <div class="nums">
+        <label class="chip"><input type="radio" name="q10"><span>1</span></label>
+        <label class="chip"><input type="radio" name="q10"><span>2</span></label>
+        <label class="chip"><input type="radio" name="q10"><span>3</span></label>
+        <label class="chip"><input type="radio" name="q10"><span>4</span></label>
+        <label class="chip"><input type="radio" name="q10"><span>5</span></label>
+      </div>
+      <span class="lab">Wajib</span>
+    </div>
+    <div class="own"><label>✏️ Usul:</label><input type="text" placeholder="tulis sendiri…"></div>
+  </div>
+
+  <!-- Q11 -->
+  <div class="q">
+    <span class="num">11</span><h3>Perlu ada awarding / penghargaan?</h3>
+    <div class="opts">
+      <label class="chip"><input type="radio" name="q11"><span>Ya</span></label>
+      <label class="chip"><input type="radio" name="q11"><span>Tidak</span></label>
+    </div>
+    <div class="own"><label>✏️ Usul kategori:</label><input type="text" placeholder="tulis sendiri…"></div>
+  </div>
+
+  <!-- Q12 -->
+  <div class="q">
+    <span class="num">12</span><h3>Seberapa meriah hiburan / panggung?</h3>
+    <div class="scale">
+      <span class="lab">Musik latar</span>
+      <div class="nums">
+        <label class="chip"><input type="radio" name="q12"><span>1</span></label>
+        <label class="chip"><input type="radio" name="q12"><span>2</span></label>
+        <label class="chip"><input type="radio" name="q12"><span>3</span></label>
+        <label class="chip"><input type="radio" name="q12"><span>4</span></label>
+        <label class="chip"><input type="radio" name="q12"><span>5</span></label>
+      </div>
+      <span class="lab">Meriah</span>
+    </div>
+    <div class="own"><label>✏️ Catatan:</label><input type="text" placeholder="tulis sendiri…"></div>
+  </div>
+
+  <!-- Q13 -->
+  <div class="q">
+    <span class="num">13</span><h3>Konsumsi</h3>
+    <div class="opts">
+      <label class="chip"><input type="radio" name="q13"><span>Tumpeng</span></label>
+      <label class="chip"><input type="radio" name="q13"><span>Prasmanan</span></label>
+      <label class="chip"><input type="radio" name="q13"><span>Potluck (bawa bareng)</span></label>
+      <label class="chip"><input type="radio" name="q13"><span>Stand jajanan</span></label>
+    </div>
+    <div class="own"><label>✏️ Lainnya:</label><input type="text" placeholder="tulis sendiri…"></div>
+  </div>
+
+  <!-- Q14 -->
+  <div class="q">
+    <span class="num">14</span><h3>Iuran</h3>
+    <div class="opts">
+      <label class="chip"><input type="radio" name="q14"><span>Tidak iuran</span></label>
+      <label class="chip"><input type="radio" name="q14"><span>≤ Rp50rb</span></label>
+      <label class="chip"><input type="radio" name="q14"><span>Rp50–100rb</span></label>
+      <label class="chip"><input type="radio" name="q14"><span>&gt; Rp100rb</span></label>
+    </div>
+    <div class="own"><label>✏️ Catatan:</label><input type="text" placeholder="tulis sendiri…"></div>
+  </div>
+
+  <!-- Q15 -->
+  <div class="q">
+    <span class="num">15</span><h3>Apa yang bikin kamu malas datang?</h3>
+    <p class="sub">centang yang relevan — biar dihindari</p>
+    <div class="opts">
+      <label class="chip"><input type="checkbox"><span>Acara kelamaan</span></label>
+      <label class="chip"><input type="checkbox"><span>Terlalu formal / kaku</span></label>
+      <label class="chip"><input type="checkbox"><span>Games memalukan</span></label>
+      <label class="chip"><input type="checkbox"><span>Jadwal bentrok</span></label>
+      <label class="chip"><input type="checkbox"><span>Jauh / ribet aksesnya</span></label>
+      <label class="chip"><input type="checkbox"><span>Kurang makan</span></label>
+    </div>
+    <div class="own"><label>✏️ Lainnya:</label><input type="text" placeholder="tulis sendiri…"></div>
+  </div>
+
+  <!-- Q16 -->
+  <div class="q">
+    <span class="num">16</span><h3>Ide bebas</h3>
+    <p class="sub">apa pun yang belum tertangkap di atas</p>
+    <textarea placeholder="Tulis ide / usul / harapan kamu di sini…"></textarea>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="btn-drive" id="btnSend" onclick="kirim()">
+      <svg width="18" height="18" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5L6.6 66.85z" fill="#0066DA"/><path d="M43.65 25L29.9 1.2C28.55.4 27 0 25.45 0c-1.55 0-3.1.4-4.5 1.2L6.6 11.15c-1.35.8-2.5 1.95-3.3 3.3L16.1 37.5h27.5V25z" fill="#00AC47"/><path d="M73.55 76.8c1.35-.8 2.5-1.95 3.3-3.3l1.6-2.75L86.1 57.5c.8-1.4 1.2-2.95 1.2-4.5H59.8L73.55 76.8z" fill="#EA4335"/><path d="M43.65 25v28.5H71.2L57.2 14.45c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25z" fill="#00832D"/><path d="M0 53.5c0 1.55.4 3.1 1.2 4.5l3.85 6.65 9.6 9.95c1.35.8 2.9 1.2 4.45 1.2H27.5L43.65 53.5H0z" fill="#2684FC"/><path d="M43.65 25H16.1l9.35-23.8c1.35-.8 2.9-1.2 4.45-1.2 1.55 0 3.1.4 4.5 1.2l9.25 23.8z" fill="#00AC47"/></svg>
+      Kirim ke Google Drive
+    </button>
+  </div>
+  <div id="dstatus" class="dstatus"></div>
+  </form>
+
+  <div class="foot">© 2026 CESGS Universitas Airlangga · kuesioner aspirasi divisi</div>
+</div>
+
+<script>
+// Endpoint Apps Script (sama dgn contoh AHP) — terima {pdf: base64, filename} lalu simpan ke Drive.
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx-nAu0fRkvqNYMEuooRCM3m9SQ_Vn-PIq4KGmDKTzRlmTkpvBzbaFZocP4Tr5f9QjYVA/exec';
+
+function b64utf8(s){ return btoa(unescape(encodeURIComponent(s))); }
+
+function buildMarkdown(){
+  const cards = [...document.querySelectorAll('form .q')];
+  let nama = '';
+  const lines = [];
+  cards.forEach(card=>{
+    if(card.classList.contains('name')){
+      nama = (card.querySelector('input[type=text]').value || '').trim();
+      return;
+    }
+    const num = (card.querySelector('.num')?.innerText || '').trim();
+    const title = (card.querySelector('h3')?.innerText || '').trim();
+    const ta = card.querySelector('textarea');
+    let val;
+    if(ta){
+      val = (ta.value || '').trim();
+    } else {
+      const sel = [...card.querySelectorAll('.chip input:checked')]
+        .map(i => i.closest('.chip').querySelector('span').innerText.trim());
+      const own = (card.querySelector('.own input')?.value || '').trim();
+      val = sel.join(', ');
+      if(own) val += (val ? ' | ' : '') + 'lainnya: ' + own;
+    }
+    lines.push(`**${num}. ${title}**\n${val || '—'}\n`);
+  });
+  const date = new Date().toISOString().slice(0,10);
+  const md = `# Aspirasi Ultah Kantor — CESGS\n\n**Nama:** ${nama || '(tanpa nama)'}  \n**Tanggal:** ${date}\n\n---\n\n` + lines.join('\n');
+  return { nama: nama || 'Responden', date, md };
+}
+
+async function kirim(){
+  const btn = document.getElementById('btnSend');
+  const st = document.getElementById('dstatus');
+  const { nama, date, md } = buildMarkdown();
+  if(!nama || nama === 'Responden'){
+    st.className = 'dstatus err';
+    st.innerHTML = 'Isi <b>nama</b> dulu ya sebelum mengirim.';
+    window.scrollTo({top:0, behavior:'smooth'});
+    return;
+  }
+  const filename = `Aspirasi_${nama.replace(/\s+/g,'_')}_${date}.md`;
+
+  btn.disabled = true;
+  st.className = 'dstatus send';
+  st.innerHTML = '<span class="spin"></span><span>Mengirim ke Google Drive…</span>';
+
+  try{
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' }, // hindari preflight CORS
+      body: JSON.stringify({ pdf: b64utf8(md), filename })
+    });
+    const json = await resp.json();
+    if(json.ok){
+      st.className = 'dstatus ok';
+      st.innerHTML = `✓ Terkirim! Aspirasi <b>${nama}</b> tersimpan sebagai <b>${filename}</b> di Google Drive. Terima kasih 🎉`;
+      btn.innerHTML = '✓ Terkirim';
+    } else {
+      throw new Error(json.error || 'Apps Script mengembalikan error');
+    }
+  }catch(err){
+    st.className = 'dstatus err';
+    st.innerHTML = `✗ Gagal mengirim: ${err.message}.<br>Coba lagi, atau hubungi panitia.`;
+    btn.disabled = false;
+  }
+}
+</script>
+
+</body>
+</html>
