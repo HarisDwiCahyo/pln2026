@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Peta Potensi PLTS Terapung — RUPTL PLN 2025–2034</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --blue:   #003D7C;
+  --yellow: #F5C400;
+  --border: #C8D8EC;
+  --text:   #1A2A3A;
+  --mid:    #4A5A6A;
+  --muted:  #8A9AAA;
+  --light:  #EEF4FB;
+  --sum:    #1B6CA8;
+  --jam:    #1E8449;
+  --kal:    #6B3FA0;
+  --sul:    #C0392B;
+  --map:    #D4880D;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; background: #F0F4F8; color: var(--text); }
+
+/* ── HEADER ─────────────────────── */
+#header {
+  background: var(--blue);
+  border-bottom: 3px solid var(--yellow);
+  padding: 0 24px; height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 2000;
+}
+#header-left { display: flex; align-items: center; gap: 14px; }
+#pln-badge { background: var(--yellow); color: var(--blue); font-weight: 700; font-size: 11px; letter-spacing: 0.1em; padding: 5px 10px; flex-shrink: 0; }
+#header h1 { color: #fff; font-size: 13px; font-weight: 600; line-height: 1.25; }
+#header h1 span { color: var(--yellow); display: block; font-size: 9.5px; font-weight: 400; letter-spacing: 0.06em; text-transform: uppercase; }
+#header-stats { display: flex; gap: 24px; }
+.hdr-stat .val { color: var(--yellow); font-size: 14px; font-weight: 700; line-height: 1; }
+.hdr-stat .lbl { color: rgba(255,255,255,0.45); font-size: 9px; text-transform: uppercase; letter-spacing: 0.07em; margin-top: 2px; }
+
+/* ── FILTER BAR ─────────────────── */
+#filter-bar {
+  background: var(--blue);
+  padding: 0 24px; display: flex; align-items: center; gap: 6px; height: 44px;
+  border-bottom: 1px solid rgba(255,255,255,0.08); overflow-x: auto;
+}
+#filter-label { color: rgba(255,255,255,0.4); font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-right: 6px; flex-shrink: 0; }
+.filter-btn {
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.65); font-family: 'DM Sans', sans-serif;
+  font-size: 10.5px; font-weight: 600; padding: 5px 13px;
+  cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 7px; white-space: nowrap; flex-shrink: 0;
+}
+.filter-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+.filter-btn.active { color: #fff; font-weight: 700; border-color: transparent; }
+.filter-btn.active[data-region="all"]        { background: rgba(255,255,255,0.18); }
+.filter-btn.active[data-region="sumatera"]   { background: var(--sum); }
+.filter-btn.active[data-region="jamali"]     { background: var(--jam); }
+.filter-btn.active[data-region="kalimantan"] { background: var(--kal); }
+.filter-btn.active[data-region="sulawesi"]   { background: var(--sul); }
+.filter-btn.active[data-region="mapana"]     { background: var(--map); }
+.f-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── MAP ────────────────────────── */
+#map-section { position: relative; }
+#map {
+  width: 100%; height: 62vh; min-height: 420px;
+  cursor: crosshair;
+}
+/* hide default leaflet zoom */
+.leaflet-control-zoom { display: none !important; }
+
+/* Cable annotation SVG overlay */
+#cable-svg {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 500;
+  overflow: visible;
+}
+
+/* Legend — top-right INSIDE map */
+#legend-panel {
+  position: absolute; top: 12px; right: 12px;
+  background: rgba(255,255,255,0.97);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 16px rgba(0,61,124,0.14);
+  padding: 10px 12px;
+  z-index: 800; width: 168px;
+}
+.panel-title {
+  font-size: 7px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--blue);
+  padding-bottom: 6px; margin-bottom: 6px;
+  border-bottom: 1.5px solid var(--yellow);
+}
+.leg-sep { height: 1px; background: var(--border); margin: 7px 0 6px; }
+.leg-section-lbl {
+  font-size: 6.5px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 5px;
+}
+/* 2-column grid for legend items */
+.leg-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 4px;
+}
+.leg-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 4px;
+  background: #f7f9fb;
+}
+.leg-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 16px; }
+.leg-lbl { font-size: 9px; font-weight: 500; color: var(--text); line-height: 1; }
+
+/* Leaflet popup — Swiss */
+.leaflet-popup-content-wrapper { padding: 0 !important; border-radius: 0 !important; box-shadow: 0 8px 32px rgba(0,0,0,0.24) !important; border: none !important; overflow: hidden !important; background: #fff !important; }
+.leaflet-popup-content { margin: 0 !important; width: auto !important; }
+.leaflet-popup-tip-container { display: none !important; }
+.leaflet-popup-close-button { color: rgba(255,255,255,0.7) !important; font-size: 16px !important; padding: 5px 8px !important; top: 2px !important; right: 2px !important; z-index: 10; }
+.leaflet-popup-close-button:hover { color: var(--yellow) !important; }
+.sw-popup { width: 200px; font-family: Helvetica,'Helvetica Neue',Arial,sans-serif; }
+.sw-head { background: var(--blue); padding: 9px 12px 8px 13px; border-left: 4px solid var(--yellow); }
+.sw-kode { color: var(--yellow); font-size: 7px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 3px; }
+.sw-rtag { font-size: 6.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 1.5px 5px; margin-bottom: 3px; display: inline-block; }
+.sw-nama { color: #fff; font-size: 12px; font-weight: 700; line-height: 1.2; margin-bottom: 2px; }
+.sw-prov { color: rgba(255,255,255,0.5); font-size: 8.5px; }
+.sw-div { height: 2px; }
+.sw-body { padding: 10px 12px 9px 13px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sw-lbl { font-size: 7px; font-weight: 700; color: #bbb; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2px; }
+.sw-val { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.sw-unit { font-size: 8.5px; font-weight: 400; color: #bbb; margin-left: 1px; }
+.sw-foot { padding: 6px 12px 6px 13px; background: #f5f7fa; border-top: 1px solid #e8edf2; display: flex; align-items: center; gap: 7px; }
+.sw-foot-lbl { font-size: 7.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #666; }
+
+/* Search — di bawah peta, sebelum footer */
+#search-wrap {
+  position: relative;
+  z-index: 10; display: flex; align-items: center;
+  background: #fff; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 0 20px; gap: 10px;
+}
+#search-icon { color: var(--muted); flex-shrink: 0; }
+#search-input { border: none; outline: none; font-family: 'DM Sans', sans-serif; font-size: 11px; color: var(--text); background: transparent; width: 100%; padding: 10px 0; }
+#search-results { position: absolute; bottom: calc(100% + 2px); left: 0; right: 0; background: #fff; border: 1px solid var(--border); box-shadow: 0 -4px 16px rgba(0,61,124,0.13); z-index: 900; display: none; max-height: 220px; overflow-y: auto; }
+.sr-item { padding: 8px 12px; font-size: 11px; cursor: pointer; border-bottom: 1px solid #f0f4f8; transition: background 0.1s; }
+.sr-item:hover { background: var(--light); }
+.sr-sub { font-size: 9px; color: var(--muted); margin-top: 1px; }
+
+/* ── MAP TOOLBAR BELOW MAP ─────── */
+/* ── BASEMAP PICKER ───────────────────────────── */
+#basemap-wrap{position:relative;display:flex;align-items:center;}
+#btn-basemap{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);
+  color:rgba(255,255,255,.8);cursor:pointer;height:28px;padding:0 10px;
+  display:flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;
+  font-size:9.5px;font-weight:600;transition:background .15s;white-space:nowrap;}
+#btn-basemap:hover{background:rgba(255,255,255,.22);color:#fff;}
+#btn-basemap svg{flex-shrink:0;}
+#basemap-menu{
+  display:none;position:absolute;bottom:calc(100% + 6px);right:0;
+  background:#fff;border:1px solid var(--border);
+  box-shadow:0 4px 20px rgba(0,61,124,.18);
+  min-width:160px;z-index:2000;overflow:hidden;
+}
+#basemap-menu.open{display:block;}
+.bm-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 13px;cursor:pointer;
+  font-size:10.5px;font-weight:500;color:var(--text);
+  border-bottom:1px solid #f0f4f8;transition:background .12s;
+}
+.bm-item:last-child{border-bottom:none;}
+.bm-item:hover{background:var(--light);}
+.bm-item.active{background:var(--light);font-weight:700;color:var(--blue);}
+.bm-thumb{width:28px;height:20px;border-radius:2px;flex-shrink:0;
+  background:#c8d8e8;overflow:hidden;border:1px solid #dde3ea;}
+.bm-thumb img{width:100%;height:100%;object-fit:cover;}
+#map-toolbar {
+  background: var(--blue);
+  padding: 0 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 40px; border-top: 2px solid rgba(255,255,255,0.08);
+}
+#toolbar-left { display: flex; align-items: center; gap: 4px; }
+#toolbar-right { display: flex; align-items: center; gap: 8px; }
+.tb-btn {
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.8); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; transition: background 0.15s;
+}
+.tb-btn:hover { background: rgba(255,255,255,0.22); color: #fff; }
+.tb-btn svg { pointer-events: none; }
+#coords-wrap { display: flex; align-items: center; gap: 6px; }
+#coords-lbl { color: rgba(255,255,255,0.35); font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.08em; }
+#coords-display { font-family: 'DM Mono', monospace; font-size: 9px; color: rgba(255,255,255,0.5); }
+.tb-divider { width: 1px; height: 18px; background: rgba(255,255,255,0.15); margin: 0 4px; }
+#fs-btn-lbl { font-size: 9.5px; font-weight: 600; color: rgba(255,255,255,0.7); letter-spacing: 0.04em; }
+
+/* ── CABLE LABEL BOXES ────────── */
+.cable-label {
+  position: absolute;
+  pointer-events: none;
+  z-index: 501;
+  background: rgba(255,255,255,0.97);
+  border: 1px solid var(--border);
+  padding: 3px 7px 3px 6px;
+  display: flex; align-items: center; gap: 5px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.12);
+  white-space: nowrap;
+  font-family: Helvetica,'Helvetica Neue',Arial,sans-serif;
+}
+.cable-label-no {
+  font-size: 7px; font-weight: 700; color: #fff;
+  padding: 1px 4px; min-width: 16px; text-align: center; flex-shrink: 0;
+}
+.cable-label-nama { font-size: 8.5px; font-weight: 600; color: var(--text); line-height: 1.1; }
+.cable-label-mw { font-size: 7.5px; font-weight: 700; color: #9A6B00; margin-left: 4px; flex-shrink: 0; }
+
+/* ── SECTIONS ───────────────────── */
+#sections-wrap { padding: 0 0 56px; }
+.region-section { border-top: 4px solid transparent; background: #fff; margin-bottom: 2px; }
+.region-header { padding: 26px 32px 16px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.region-name { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.region-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.region-stats { display: flex; gap: 24px; flex-shrink: 0; }
+.reg-stat .v { font-size: 19px; font-weight: 700; line-height: 1; }
+.reg-stat .l { font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-top: 3px; }
+.cards-grid { padding: 0 32px 4px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.w-card { background: #fff; border: 1px solid #dde3ea; position: relative; overflow: hidden; cursor: pointer; transition: box-shadow 0.15s, transform 0.1s; }
+.w-card:hover { box-shadow: 0 4px 20px rgba(0,61,124,0.13); transform: translateY(-1px); }
+.w-card-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+.w-card-head { padding: 8px 10px 6px 13px; }
+.w-card-no { font-size: 7px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.w-card-nama { font-size: 10.5px; font-weight: 700; color: var(--text); line-height: 1.25; margin-bottom: 1px; }
+.w-card-prov { font-size: 8.5px; color: var(--muted); }
+.w-card-divider { height: 1px; background: #edf1f5; margin: 0 10px; }
+.w-card-data { padding: 6px 10px 6px 13px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.w-card-label { font-size: 6.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #ccc; margin-bottom: 1px; }
+.w-card-val { font-size: 13px; font-weight: 700; line-height: 1.1; }
+.w-card-unit { font-size: 8px; color: #bbb; font-weight: 400; margin-left: 1px; }
+.w-card-footer { padding: 4px 10px 5px 13px; background: #f7f9fb; border-top: 1px solid #edf1f5; display: flex; align-items: center; gap: 6px; }
+.w-card-status-lbl { font-size: 7px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #777; }
+.section-divider { height: 1px; background: #dde3ea; margin: 8px 32px; }
+#page-footer { background: var(--blue); border-top: 3px solid var(--yellow); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+#page-footer .left { color: rgba(255,255,255,0.45); font-size: 9.5px; line-height: 1.7; }
+#page-footer .right { display: flex; gap: 24px; flex-shrink: 0; }
+.footer-stat .fv { color: var(--yellow); font-size: 17px; font-weight: 700; line-height: 1; text-align: right; }
+.footer-stat .fl { color: rgba(255,255,255,0.35); font-size: 8px; text-transform: uppercase; letter-spacing: 0.07em; text-align: right; margin-top: 2px; }
+
+/* ── EXPORT MODAL ─────────────────── */
+#export-modal {
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,20,40,0.82); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center;
+}
+#export-modal.open { display: flex; }
+#export-box {
+  background: #fff; width: 96vw; max-width: 1200px;
+  max-height: 94vh; display: flex; flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+}
+#export-topbar {
+  background: var(--blue); border-bottom: 3px solid var(--yellow);
+  padding: 0 20px; height: 50px; display: flex; align-items: center;
+  justify-content: space-between; flex-shrink: 0;
+}
+#export-topbar h2 { color: #fff; font-size: 13px; font-weight: 700; letter-spacing: 0.02em; }
+#export-topbar h2 span { color: var(--yellow); }
+#export-tabs { display: flex; gap: 3px; overflow-x: auto; }
+.exp-tab {
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.6); font-family: 'DM Sans',sans-serif;
+  font-size: 10px; font-weight: 700; padding: 5px 12px; cursor: pointer;
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  transition: all 0.15s; letter-spacing: 0.04em;
+}
+.exp-tab:hover { background: rgba(255,255,255,0.16); color: #fff; }
+.exp-tab.active { color: #fff; border-color: transparent; }
+.exp-tab.active[data-region="sumatera"]   { background: var(--sum); }
+.exp-tab.active[data-region="jamali"]     { background: var(--jam); }
+.exp-tab.active[data-region="kalimantan"] { background: var(--kal); }
+.exp-tab.active[data-region="sulawesi"]   { background: var(--sul); }
+.exp-tab.active[data-region="mapana"]     { background: var(--map); }
+#export-close {
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  color: #fff; cursor: pointer; width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0; transition: background 0.15s;
+}
+#export-close:hover { background: rgba(255,255,255,0.25); }
+
+/* Export canvas area */
+#export-canvas-wrap {
+  flex: 1; overflow: auto; position: relative; background: #e8edf3;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 16px;
+}
+#export-sheet {
+  width: 960px; flex-shrink: 0;
+  background: #fff;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  position: relative;
+  display: flex; flex-direction: column;
+}
+
+/* ── SWISS HEADER ─────────────────────────────── */
+#exp-header {
+  background: #fff;
+  border-bottom: 1px solid #E0E8F0;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  overflow: hidden;
+}
+#exp-header-accent {
+  height: 6px;
+  background: linear-gradient(90deg, #003D7C 0%, #003D7C 40%, #F5C400 40%, #F5C400 55%, #1E8449 55%, #1E8449 68%, #6B3FA0 68%, #6B3FA0 81%, #C0392B 81%, #C0392B 91%, #D4880D 91%, #D4880D 100%);
+}
+#exp-header-body {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px 14px;
+}
+#exp-header-left { display: flex; flex-direction: column; gap: 6px; }
+#exp-header-title {
+  line-height: 1.05; color: #0A1628;
+}
+.exp-title-line1 { font-size: 28px; font-weight: 800; font-style: normal;  display: block; letter-spacing: -0.03em; }
+.exp-title-line2 { font-size: 28px; font-weight: 300; font-style: italic;  display: block; letter-spacing: -0.01em; color: #444; }
+.exp-title-line3 { font-size: 28px; font-weight: 800; font-style: normal;  display: block; letter-spacing: -0.03em; }
+#exp-header-sub {
+  font-size: 15px; font-weight: 400; letter-spacing: 0.18em;
+  text-transform: uppercase; color: #8A9AAA;
+}
+#exp-header-right {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+}
+.exp-stat-num {
+  font-size: 52px; font-weight: 800; color: #F5C400;
+  letter-spacing: -0.04em; line-height: 1;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+.exp-stat-lbl {
+  font-size: 14px; font-weight: 600; letter-spacing: 0.16em;
+  text-transform: uppercase; color: #8A9AAA; text-align: right;
+  line-height: 1.5;
+}
+
+/* Map section — atas, stretches with sheet */
+#exp-map-section {
+  position: relative;
+  height: 420px; flex-shrink: 0; width: 100%;
+  background: #c8d8e8;
+}
+#exp-map { width: 100%; height: 100%; }
+
+/* Legend overlay — pojok KANAN BAWAH peta, absolute ke #export-sheet */
+
+
+/* Region tables section */
+#exp-region-cards {
+  border-top: 3px solid #F5C400;
+  background: #fff; flex-shrink: 0;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* Wrapper 3 kolom sejajar */
+.exp-cards-row {
+  display: grid; grid-template-columns: repeat(3, 320px);
+  border-bottom: 1px solid #E0E8F0; width: 960px;
+  align-items: start;
+}
+.exp-cards-row:last-child { border-bottom: none; }
+
+/* Kolom independen — wilayah menumpuk ke bawah tanpa gap */
+.exp-col-wrap {
+  display: flex; flex-direction: column;
+  border-right: 1px solid #E0E8F0;
+  width: 320px; min-width: 0;
+}
+.exp-col-wrap:last-child { border-right: none; }
+
+/* Each slot/sub-column */
+.exp-subcol {
+  display: flex; flex-direction: column;
+  border-bottom: 1px solid #E0E8F0;
+  min-width: 0; overflow: hidden;
+}
+.exp-subcol:last-child { border-bottom: none; }
+
+/* Region header */
+.exp-rtable-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 10px 6px;
+  border-bottom: 1px solid #E8EEF4;
+  flex-shrink: 0; background: #F8FAFC;
+}
+.exp-rtable-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.exp-rtable-name { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; flex: 1; }
+.exp-rtable-total { font-size: 13px; font-weight: 600; opacity: 0.75; white-space: nowrap; }
+
+/* Column header */
+.exp-rtable-colhead {
+  display: grid; grid-template-columns: 22px 1fr 55px 18px;
+  padding: 3px 8px;
+  background: #F0F4F8;
+  border-bottom: 1px solid #E0E8F0;
+  flex-shrink: 0;
+}
+.exp-rtable-colhead span {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: #8A9AAA;
+}
+.exp-rtable-colhead span:nth-child(3) { text-align: right; }
+
+/* Rows */
+.exp-waduk-row {
+  display: grid; grid-template-columns: 22px 1fr 55px 18px;
+  padding: 3px 8px;
+  border-bottom: 1px solid #F5F7FA;
+  align-items: center;
+}
+.exp-waduk-row:last-child { border-bottom: none; }
+.exp-waduk-no   { font-size: 13px; color: #AAB8C8; font-weight: 600; }
+.exp-waduk-nama { font-size: 13.5px; color: #1A2A3A; font-weight: 500; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 3px; }
+.exp-waduk-mw   { font-size: 13.5px; font-weight: 700; text-align: right; padding-right: 3px; }
+.exp-waduk-ico  { display: flex; align-items: center; justify-content: center; }
+
+/* Legend bar — landscape di bawah tabel */
+#exp-legend-bar {
+  border-top: 2px solid #F5C400;
+  background: #F8FAFC;
+  padding: 10px 16px;
+  display: flex; align-items: flex-start; gap: 28px;
+  flex-shrink: 0;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+.exp-leg-section { display: flex; flex-direction: column; gap: 5px; }
+.exp-leg-section-lbl {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.13em;
+  text-transform: uppercase; color: #8A9AAA; margin-bottom: 2px;
+}
+.exp-leg-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.exp-leg-item { display: flex; align-items: center; gap: 5px; }
+.exp-leg-item span { font-size: 15px; font-weight: 500; color: #1A2A3A; white-space: nowrap; }
+.exp-leg-divider { width: 1px; background: #C8D8EC; align-self: stretch; margin: 0 4px; }
+#export-actions {
+  height: 44px; background: #f0f4f8; border-top: 1px solid #dde3ea;
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 20px; gap: 10px; flex-shrink: 0;
+}
+#btn-dl-png {
+  background: var(--blue); color: #fff; border: none;
+  font-family: 'DM Sans',sans-serif; font-size: 10.5px; font-weight: 700;
+  padding: 7px 18px; cursor: pointer; display: flex; align-items: center;
+  gap: 7px; transition: background 0.15s;
+}
+#btn-dl-png:hover { background: #005aaa; }
+#btn-dl-png.loading { opacity: 0.6; pointer-events: none; }
+#exp-loading {
+  display: none; position: absolute; inset: 0;
+  background: rgba(255,255,255,0.85); z-index: 100;
+  align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+}
+#exp-loading.show { display: flex; }
+#exp-loading-txt { font-size: 12px; font-weight: 600; color: var(--blue); }
+
+/* ── IRADIASI BAR ────────────────────────────── */
+#irad-bar{background:var(--blue);border-top:1px solid rgba(255,255,255,.10);
+  padding:0 20px;display:flex;align-items:center;gap:14px;height:46px;}
+#irad-bar .ibl{color:rgba(255,255,255,.5);font-size:8.5px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;flex-shrink:0;
+  display:flex;align-items:center;gap:6px;}
+#itl-wrap{display:flex;flex-direction:column;gap:5px;flex:1;max-width:380px;}
+#itl-track{position:relative;height:4px;background:rgba(255,255,255,.15);
+  border-radius:2px;cursor:pointer;}
+#itl-fill{position:absolute;left:0;top:0;height:100%;width:0%;
+  background:var(--yellow);border-radius:2px;pointer-events:none;
+  transition:width .25s cubic-bezier(.4,0,.2,1);}
+#itl-thumb{position:absolute;top:50%;left:0%;cursor:grab;width:14px;height:14px;
+  border-radius:50%;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.5);
+  transform:translate(-50%,-50%);transition:left .25s cubic-bezier(.4,0,.2,1);}
+#itl-labels{display:flex;justify-content:space-between;}
+.itll{display:flex;flex-direction:column;align-items:center;gap:1px;
+  font-size:8.5px;font-weight:600;color:rgba(255,255,255,.35);
+  cursor:pointer;transition:color .15s;text-align:center;padding:0 2px;}
+.itll small{font-size:7px;font-weight:400;letter-spacing:.06em;}
+.itll .ild{width:6px;height:6px;border-radius:50%;margin-bottom:2px;
+  opacity:.3;transition:opacity .15s,transform .15s;}
+.itll.active{color:rgba(255,255,255,.95);}
+.itll.active .ild{opacity:1;transform:scale(1.4);}
+#irad-off-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.4);width:26px;height:26px;display:flex;
+  align-items:center;justify-content:center;cursor:pointer;
+  border-radius:3px;flex-shrink:0;transition:all .15s;}
+#irad-off-btn:hover{color:#fff;background:rgba(255,50,50,.3);}
+#iop-wrap{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0;}
+#iop-wrap label{color:rgba(255,255,255,.35);font-size:8px;font-weight:600;
+  letter-spacing:.12em;text-transform:uppercase;}
+#iop-range{-webkit-appearance:none;width:80px;height:3px;
+  background:rgba(255,255,255,.15);border-radius:2px;outline:none;cursor:pointer;}
+#iop-range::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;
+  border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.4);}
+#iop-val{font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,.5);min-width:26px;}
+/* symbol color toggle */
+#sym-mode-wrap{display:flex;align-items:center;gap:2px;flex-shrink:0;}
+#sym-mode-wrap label{color:rgba(255,255,255,.35);font-size:8px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-right:4px;}
+.smode-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.5);font-family:'DM Sans',sans-serif;font-size:9px;font-weight:600;padding:4px 10px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.smode-btn:first-of-type{border-radius:3px 0 0 3px;}
+.smode-btn:last-of-type{border-radius:0 3px 3px 0;}
+.smode-btn.active{background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.3);}
+/* ── COLORBAR ────────────────────────────────── */
+#irad-cb{position:absolute;bottom:42px;left:10px;
+  background:rgba(255,255,255,.97);border:1px solid var(--border);
+  box-shadow:0 2px 16px rgba(0,61,124,.14);
+  padding:8px 11px 7px;z-index:800;display:none;min-width:220px;}
+#irad-cb .cbh{font-size:7px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--blue);margin-bottom:2px;display:flex;align-items:center;gap:6px;
+  padding-bottom:5px;border-bottom:1.5px solid var(--yellow);}
+#irad-cb .cbh::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--yellow);flex-shrink:0;}
+#cb-sub{font-size:7px;color:var(--muted);margin-bottom:7px;}
+#cb-canvas{display:block;width:100%;height:12px;border-radius:3px;margin-bottom:4px;}
+#cb-ticks{display:flex;justify-content:space-between;}
+#cb-ticks span{font-size:8px;color:var(--mid);font-family:'DM Mono',monospace;
+  background:var(--light);padding:1px 4px;border-radius:2px;}
+#cb-unit{font-size:7px;color:var(--muted);margin-top:4px;letter-spacing:.08em;text-transform:uppercase;}
+/* render mode toggle */
+#irad-mode-wrap{display:flex;align-items:center;gap:2px;flex-shrink:0;}
+#irad-mode-wrap label{color:rgba(255,255,255,.35);font-size:8px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-right:4px;}
+.imode-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.5);font-family:'DM Sans',sans-serif;font-size:9px;font-weight:600;padding:4px 10px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.imode-btn:first-of-type{border-radius:3px 0 0 3px;}
+.imode-btn:last-of-type{border-radius:0 3px 3px 0;}
+.imode-btn.active{background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.3);}
+/* ── CHART ───────────────────────────────────── */
+#chart-sec{background:#fff;border-top:3px solid var(--yellow);padding:24px 32px 28px;}
+#chart-hdr{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;}
+#chart-hdr h2{font-size:18px;font-weight:700;letter-spacing:-.02em;color:var(--text);}
+#chart-hdr p{font-size:10px;color:var(--muted);margin-top:3px;}
+#chart-leg{display:flex;align-items:center;gap:16px;flex-shrink:0;}
+.cleg{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:600;
+  color:var(--mid);letter-spacing:.05em;text-transform:uppercase;}
+.cdot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+#chart-cv{display:block;width:100%;}
+
+/* ── EXPORT IRADIASI MODAL ─────────────────────────────── */
+#irad-export-modal{display:none;position:fixed;inset:0;z-index:9999;
+  background:rgba(0,20,40,.85);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;}
+#irad-export-modal.open{display:flex;}
+#irad-export-box{background:#fff;width:96vw;max-width:980px;
+  max-height:94vh;display:flex;flex-direction:column;
+  box-shadow:0 24px 80px rgba(0,0,0,.5);}
+#irad-exp-top{background:var(--blue);border-bottom:3px solid var(--yellow);
+  padding:0 20px;height:50px;display:flex;align-items:center;
+  justify-content:space-between;flex-shrink:0;}
+#irad-exp-top h2{color:#fff;font-size:13px;font-weight:700;}
+#irad-exp-top h2 span{color:var(--yellow);}
+#irad-exp-close{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  color:#fff;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;
+  justify-content:center;font-size:18px;transition:background .15s;}
+#irad-exp-close:hover{background:rgba(255,255,255,.25);}
+#irad-exp-body{flex:1;overflow:auto;background:#e8edf3;padding:16px;
+  display:flex;align-items:flex-start;justify-content:center;}
+#irad-exp-sheet{width:900px;flex-shrink:0;background:#fff;
+  box-shadow:0 4px 24px rgba(0,0,0,.2);}
+#irad-exp-mapwrap{position:relative;height:420px;background:#c8d8e8;overflow:hidden;}
+#irad-exp-map{width:100%;height:100%;}
+#irad-exp-footer{border-top:3px solid var(--yellow);background:#f8fafc;
+  padding:10px 16px;display:flex;align-items:flex-start;
+  justify-content:space-between;gap:12px;flex-shrink:0;flex-wrap:wrap;}
+.ef-title{font-size:12px;font-weight:700;color:var(--text);}
+.ef-sub{font-size:8.5px;color:var(--muted);margin-top:2px;}
+#irad-exp-cb-wrap{display:flex;flex-direction:column;gap:4px;min-width:200px;}
+#irad-exp-cb-title{font-size:7px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--blue);margin-bottom:2px;}
+#irad-exp-grad{display:block;width:100%;height:10px;border-radius:2px;}
+#irad-exp-ticks{display:flex;justify-content:space-between;}
+#irad-exp-ticks span{font-size:8px;color:var(--mid);font-family:'DM Mono',monospace;}
+#irad-exp-source{font-size:8px;color:var(--muted);text-align:right;line-height:1.7;}
+/* legenda dot di footer export — horizontal */
+#irad-exp-leg{display:flex;flex-direction:column;gap:4px;}
+#irad-exp-leg-title{font-size:7px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--blue);margin-bottom:2px;}
+.iel-section{display:flex;flex-direction:column;gap:3px;}
+.iel-lbl{font-size:6.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);}
+.iel-items{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;}
+.iel-row{display:flex;align-items:center;gap:4px;}
+.iel-row span{font-size:8px;color:var(--text);white-space:nowrap;}
+#irad-exp-actions{height:44px;background:#f0f4f8;border-top:1px solid #dde3ea;
+  display:flex;align-items:center;justify-content:flex-end;
+  padding:0 20px;gap:10px;flex-shrink:0;}
+#btn-irad-dl{background:var(--blue);color:#fff;border:none;
+  font-family:'DM Sans',sans-serif;font-size:10.5px;font-weight:700;
+  padding:7px 18px;cursor:pointer;display:flex;align-items:center;
+  gap:7px;transition:background .15s;}
+#btn-irad-dl:hover{background:#005aaa;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div id="header-left">
+    <div id="pln-badge">PLN</div>
+    <h1>Peta Potensi PLTS Terapung<span>Kajian Teknis-Ekonomi · Bendungan Nasional · RUPTL PLN 2025–2034</span></h1>
+  </div>
+  <div id="header-stats">
+    <div class="hdr-stat"><div class="val">108</div><div class="lbl">Waduk</div></div>
+    <div class="hdr-stat"><div class="val">13.899</div><div class="lbl">MW Potensi</div></div>
+    <div class="hdr-stat"><div class="val">5</div><div class="lbl">Wilayah</div></div>
+    <div class="hdr-stat"><div class="val" style="font-size:10px">RUPTL 2025–2034</div><div class="lbl">Sumber</div></div>
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div id="filter-bar">
+  <span id="filter-label">Wilayah</span>
+  <button class="filter-btn active" data-region="all"><div class="f-dot" style="background:rgba(255,255,255,0.35)"></div>Semua Wilayah</button>
+  <button class="filter-btn" data-region="sumatera"><div class="f-dot" style="background:var(--sum)"></div>Sumatera</button>
+  <button class="filter-btn" data-region="jamali"><div class="f-dot" style="background:var(--jam)"></div>Jamali</button>
+  <button class="filter-btn" data-region="kalimantan"><div class="f-dot" style="background:var(--kal)"></div>Kalimantan</button>
+  <button class="filter-btn" data-region="sulawesi"><div class="f-dot" style="background:var(--sul)"></div>Sulawesi</button>
+  <button class="filter-btn" data-region="mapana"><div class="f-dot" style="background:var(--map)"></div>Mapana</button>
+  <div style="flex:1"></div>
+  <div id="sym-mode-wrap" style="margin-left:auto;flex-shrink:0">
+    <label>SIMBOL</label>
+    <button class="smode-btn active" id="smode-color">Warna Wilayah</button>
+    <button class="smode-btn" id="smode-black">Hitam</button>
+  </div>
+  <button id="btn-export" style="background:var(--yellow);border:none;color:var(--blue);font-family:'DM Sans',sans-serif;font-size:10.5px;font-weight:700;padding:5px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;letter-spacing:0.04em;flex-shrink:0;">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    EXPORT PETA
+  </button>
+</div>
+
+<!-- MAP -->
+
+<!-- IRADIASI BAR -->
+<div id="irad-bar">
+  <span class="ibl">
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#F5C400" stroke-width="2.5">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zM17.9 17.39A9.955 9.955 0 0 0 22 12c0-4.97-3.63-9.09-8.38-9.87v1.73l3.45 3.45c.29.29.46.69.46 1.1v2.59c0 .83-.67 1.5-1.5 1.5H13v2h2c.55 0 1 .45 1 1v2.89z" fill="#F5C400"/>
+    </svg>
+    BAHAYA GEMPA
+  </span>
+  <span style="color:rgba(255,255,255,.6);font-size:10px;font-weight:600;">Layer Bahaya Gempa (COG)</span>
+  <button id="irad-off-btn" title="Sembunyikan">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <button id="btn-irad-export" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-family:'DM Sans',sans-serif;font-size:9px;font-weight:700;padding:4px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0;border-radius:3px;">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Export
+  </button>
+  <div id="iop-wrap">
+    <label>OPACITY</label>
+    <input type="range" id="iop-range" min="10" max="95" value="50">
+    <span id="iop-val">50%</span>
+  </div>
+</div>
+<div id="map-section">
+  <div id="map"></div>
+
+  <!-- Cable SVG layer -->
+  <svg id="cable-svg"></svg>
+
+  <!-- Legend top-right: dot shapes only, 2-col grid -->
+    <!-- COLORBAR -->
+  <div id="irad-cb">
+    <div class="cbh">Bahaya Gempa</div>
+    <div id="cb-sub">Cloud Optimized GeoTIFF</div>
+    <canvas id="cb-canvas"></canvas>
+    <div id="cb-ticks">
+      <span id="cb-t0">—</span><span id="cb-t1">—</span>
+      <span id="cb-t2">—</span><span id="cb-t3">—</span><span id="cb-t4">—</span>
+    </div>
+    <div id="cb-unit">Indeks Bahaya Gempa</div>
+  </div>
+<div id="legend-panel">
+    <div class="panel-title">Legenda</div>
+
+    <!-- Wilayah — hides when single region active -->
+    <div id="leg-wilayah">
+      <div class="leg-section-lbl">Wilayah</div>
+      <div class="leg-grid">
+        <div class="leg-row"><div class="leg-icon"><svg width="12" height="12"><circle cx="6" cy="6" r="5.5" fill="#1B6CA8"/></svg></div><div class="leg-lbl">Sumatera</div></div>
+        <div class="leg-row"><div class="leg-icon"><svg width="12" height="12"><circle cx="6" cy="6" r="5.5" fill="#1E8449"/></svg></div><div class="leg-lbl">Jamali</div></div>
+        <div class="leg-row"><div class="leg-icon"><svg width="12" height="12"><circle cx="6" cy="6" r="5.5" fill="#6B3FA0"/></svg></div><div class="leg-lbl">Kalimantan</div></div>
+        <div class="leg-row"><div class="leg-icon"><svg width="12" height="12"><circle cx="6" cy="6" r="5.5" fill="#C0392B"/></svg></div><div class="leg-lbl">Sulawesi</div></div>
+        <div class="leg-row" style="grid-column:1/-1"><div class="leg-icon"><svg width="12" height="12"><circle cx="6" cy="6" r="5.5" fill="#D4880D"/></svg></div><div class="leg-lbl">Mapana</div></div>
+      </div>
+      <div class="leg-sep"></div>
+    </div>
+
+    <!-- Status — always visible, 2×2 grid -->
+    <div class="leg-section-lbl">Status</div>
+    <div class="leg-grid">
+      <!-- Selesai: solid -->
+      <div class="leg-row">
+        <div class="leg-icon"><svg width="14" height="14">
+          <circle cx="7" cy="7" r="6" fill="#555"/>
+        </svg></div>
+        <div class="leg-lbl">Selesai</div>
+      </div>
+      <!-- Eksisting: hatched -->
+      <div class="leg-row">
+        <div class="leg-icon"><svg width="14" height="14">
+          <defs><pattern id="lh" patternUnits="userSpaceOnUse" width="3" height="3" patternTransform="rotate(45)"><rect width="1.5" height="3" fill="#555"/></pattern></defs>
+          <circle cx="7" cy="7" r="5.5" fill="none" stroke="#555" stroke-width="1.3"/>
+          <circle cx="7" cy="7" r="4.8" fill="url(#lh)"/>
+        </svg></div>
+        <div class="leg-lbl">Eksisting</div>
+      </div>
+      <!-- On Going: dashed ring -->
+      <div class="leg-row">
+        <div class="leg-icon"><svg width="14" height="14">
+          <circle cx="7" cy="7" r="5.2" fill="none" stroke="#555" stroke-width="1.8" stroke-dasharray="2.8,2"/>
+        </svg></div>
+        <div class="leg-lbl">On Going</div>
+      </div>
+      <!-- Baru: ring + centre dot -->
+      <div class="leg-row">
+        <div class="leg-icon"><svg width="14" height="14">
+          <circle cx="7" cy="7" r="5.8" fill="none" stroke="#555" stroke-width="1.3"/>
+          <circle cx="7" cy="7" r="2.3" fill="#555"/>
+        </svg></div>
+        <div class="leg-lbl">Baru</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MAP TOOLBAR (zoom + fullscreen + coords) BELOW MAP -->
+<div id="map-toolbar">
+  <div id="toolbar-left">
+    <button class="tb-btn" id="btn-zoom-in" title="Zoom In">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <button class="tb-btn" id="btn-zoom-out" title="Zoom Out">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <div class="tb-divider"></div>
+    <button class="tb-btn" id="btn-reset-view" title="Reset Tampilan" style="width:auto;padding:0 10px;gap:5px;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      <span style="font-size:9px;font-weight:600;letter-spacing:0.04em;color:rgba(255,255,255,0.7)">Reset</span>
+    </button>
+  </div>
+  <div id="toolbar-right">
+    <div id="coords-wrap">
+      <span id="coords-lbl">Kursor</span>
+      <span id="coords-display">—</span>
+    </div>
+    <div class="tb-divider"></div>
+    <div id="basemap-wrap">
+      <button id="btn-basemap">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
+          <line x1="9" y1="3" x2="9" y2="18"/>
+          <line x1="15" y1="6" x2="15" y2="21"/>
+        </svg>
+        Basemap
+      </button>
+      <div id="basemap-menu">
+        <div class="bm-item active" data-bm="esri-street">
+          <div class="bm-thumb" style="background:linear-gradient(135deg,#a8d5f5 40%,#d4e8b0 60%)"></div>
+          ESRI Street Map
+        </div>
+        <div class="bm-item" data-bm="topo">
+          <div class="bm-thumb" style="background:linear-gradient(135deg,#a8d5f5 30%,#c8dba0 50%,#d4c8a0 70%)"></div>
+          Topografi
+        </div>
+        <div class="bm-item" data-bm="osm">
+          <div class="bm-thumb" style="background:linear-gradient(135deg,#b8e0f7 40%,#d8efc0 60%)"></div>
+          OpenStreetMap
+        </div>
+        <div class="bm-item" data-bm="satellite">
+          <div class="bm-thumb" style="background:linear-gradient(135deg,#1a3a1a 40%,#2a4a2a 60%)"></div>
+          Satelit
+        </div>
+        <div class="bm-item" data-bm="dark">
+          <div class="bm-thumb" style="background:linear-gradient(135deg,#1a1a2e 40%,#2a2a3e 60%)"></div>
+          Dark
+        </div>
+      </div>
+    </div>
+    <div class="tb-divider"></div>
+    <button class="tb-btn" id="btn-fullscreen" title="Layar Penuh" style="width:auto;padding:0 10px;gap:6px;">
+      <svg id="fs-expand" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      <svg id="fs-collapse" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+      <span id="fs-btn-lbl">Layar Penuh</span>
+    </button>
+  </div>
+</div>
+
+<!-- SECTIONS -->
+<div id="sections-wrap"></div>
+<!-- CHART -->
+
+
+<!-- SEARCH BAR -->
+<div id="search-wrap">
+  <svg id="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+  <input type="text" id="search-input" placeholder="Cari waduk atau provinsi..."/>
+  <div id="search-results"></div>
+</div>
+
+<!-- PAGE FOOTER -->
+<div id="page-footer">
+  <div class="left">
+    Kajian Potensi PLTS Terapung pada Bendungan Kementerian PU<br/>
+    Sumber: RUPTL PLN 2025–2034 &amp; Kementerian ESDM (EBTKE) 2024 · Tim Konsultan Eksternal
+  </div>
+  <div class="right">
+    <div class="footer-stat"><div class="fv">108</div><div class="fl">Total Lokasi</div></div>
+    <div class="footer-stat"><div class="fv">13.899 MW</div><div class="fl">Potensi Nasional</div></div>
+    <div class="footer-stat"><div class="fv">22</div><div class="fl">Provinsi</div></div>
+  </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div id="export-modal">
+  <div id="export-box">
+    <div id="export-topbar">
+      <h2>EXPORT PETA &nbsp;<span>— Peta Nasional + Ringkasan Wilayah</span></h2>
+      <button id="export-close">✕</button>
+    </div>
+
+    <div id="export-canvas-wrap">
+      <div id="export-sheet">
+
+        <!-- HEADER SWISS STYLE -->
+        <div id="exp-header">
+          <div id="exp-header-accent"></div>
+          <div id="exp-header-body">
+            <div id="exp-header-left">
+              <div id="exp-header-title">
+                <span class="exp-title-line1">Distribusi</span>
+                <span class="exp-title-line2">PLTS Terapung</span>
+                <span class="exp-title-line3">di Indonesia</span>
+              </div>
+              <div id="exp-header-sub">RUPTL 2025–2034 &nbsp;·&nbsp; Pembangkit Listrik Tenaga Surya Terapung</div>
+            </div>
+            <div id="exp-header-right">
+              <div class="exp-stat-num">13.899</div>
+              <div class="exp-stat-lbl">MEGAWATT<br>TOTAL POTENSI</div>
+            </div>
+          </div>
+        </div>
+        <div id="exp-map-section">
+          <div id="exp-map"></div>
+        </div>
+
+        <!-- BAGIAN BAWAH: Kartu per wilayah -->
+        <div id="exp-region-cards">
+          <!-- diisi JS -->
+        </div>
+
+        <!-- BAGIAN PALING BAWAH: Legenda landscape -->
+        <div id="exp-legend-bar">
+          <!-- diisi JS -->
+        </div>
+
+        <div id="exp-loading">
+          <svg width="32" height="32" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#003D7C" stroke-width="4" stroke-dasharray="80 40" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" dur="0.8s" repeatCount="indefinite" from="0 25 25" to="360 25 25"/></circle></svg>
+          <div id="exp-loading-txt">Menyiapkan peta…</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="export-actions">
+      <span style="font-size:9.5px;color:#666">Format: PNG · Peta Nasional</span>
+      <button id="btn-dl-png">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download PNG
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://unpkg.com/georaster"></script>
+<script src="https://unpkg.com/georaster-layer-for-leaflet"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+// ── REGION CONFIG ─────────────────────────────────────────────────────────────
+const REGIONS = {
+  sumatera:   { label:'Sumatera',   sub:'Pulau Sumatera dan kepulauan sekitarnya', color:'#1B6CA8',
+    provinces:['Aceh','Sumatera Utara','Sumatera Barat','Riau','Kepulauan Riau','Jambi','Sumatera Selatan','Bengkulu','Lampung','Bangka Belitung'] },
+  jamali:     { label:'Jamali',     sub:'Jawa · Madura · Bali', color:'#1E8449',
+    provinces:['Banten','DKI Jakarta','Jawa Barat','Jawa Tengah','DI Yogyakarta','Jawa Timur','Bali'] },
+  kalimantan: { label:'Kalimantan', sub:'Seluruh wilayah Pulau Kalimantan', color:'#6B3FA0',
+    provinces:['Kalimantan Barat','Kalimantan Tengah','Kalimantan Selatan','Kalimantan Timur','Kalimantan Utara'] },
+  sulawesi:   { label:'Sulawesi',   sub:'Seluruh wilayah Pulau Sulawesi', color:'#C0392B',
+    provinces:['Sulawesi Utara','Gorontalo','Sulawesi Tengah','Sulawesi Barat','Sulawesi Selatan','Sulawesi Tenggara'] },
+  mapana:     { label:'Mapana',     sub:'Maluku · Papua · Nusa Tenggara', color:'#D4880D',
+    provinces:['Maluku','Maluku Utara','Papua','Papua Barat','Papua Selatan','Papua Tengah','Papua Pegunungan','Papua Barat Daya','Nusa Tenggara Barat','Nusa Tenggara Timur'] },
+};
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const WADUK = [
+  {kode:"PLTST-1",  nama:"Jatiluhur/Djuanda",      provinsi:"Jawa Barat",         lon:107.310748, lat:-6.526886,  luas:8130, mw:1626,   status:"Eksisting"},
+  {kode:"PLTST-2",  nama:"Karangkates/Sutami",      provinsi:"Jawa Timur",         lon:112.446994, lat:-8.159799,  luas:1500, mw:300,    status:"Eksisting"},
+  {kode:"PLTST-3",  nama:"Kedung Ombo",             provinsi:"Jawa Tengah",        lon:110.836375, lat:-7.253714,  luas:4600, mw:920,    status:"Eksisting"},
+  {kode:"PLTST-4",  nama:"Tlogo Ngebel",            provinsi:"Jawa Timur",         lon:111.63179,  lat:-7.796114,  luas:143,  mw:28.6,   status:"Eksisting"},
+  {kode:"PLTST-5",  nama:"Selorejo",                provinsi:"Jawa Timur",         lon:112.361111, lat:-7.865278,  luas:400,  mw:80,     status:"Eksisting"},
+  {kode:"PLTST-6",  nama:"Sempor",                  provinsi:"Jawa Tengah",        lon:109.485728, lat:-7.566503,  luas:247,  mw:49.48,  status:"Eksisting"},
+  {kode:"PLTST-7",  nama:"Bening/Widas",            provinsi:"Jawa Timur",         lon:111.79971,  lat:-7.54537,   luas:570,  mw:114,    status:"Eksisting"},
+  {kode:"PLTST-8",  nama:"Wadas Lintang",           provinsi:"Jawa Tengah",        lon:109.781083, lat:-7.607597,  luas:1280, mw:256,    status:"Eksisting"},
+  {kode:"PLTST-9",  nama:"Sengguruh",               provinsi:"Jawa Timur",         lon:112.552216, lat:-8.183226,  luas:237,  mw:47.4,   status:"Eksisting"},
+  {kode:"PLTST-10", nama:"Mamak",                   provinsi:"Nusa Tenggara Barat",lon:117.578792, lat:-8.697699,  luas:270,  mw:54,     status:"Eksisting"},
+  {kode:"PLTST-11", nama:"Merancang",               provinsi:"Kalimantan Barat",   lon:117.640259, lat:2.205452,   luas:587,  mw:117.46, status:"Eksisting"},
+  {kode:"PLTST-12", nama:"Wonorejo",                provinsi:"Jawa Timur",         lon:111.800219, lat:-8.015859,  luas:385,  mw:77,     status:"Eksisting"},
+  {kode:"PLTST-13", nama:"Batu Bulan",              provinsi:"Nusa Tenggara Barat",lon:117.47067,  lat:-8.614484,  luas:633,  mw:126.65, status:"Eksisting"},
+  {kode:"PLTST-14", nama:"Batu Tegi",               provinsi:"Lampung",            lon:104.780956, lat:-5.254539,  luas:2100, mw:420,    status:"Eksisting"},
+  {kode:"PLTST-15", nama:"Pandanduri",              provinsi:"Nusa Tenggara Barat",lon:116.434357, lat:-8.684755,  luas:328,  mw:65.6,   status:"Eksisting"},
+  {kode:"PLTST-16", nama:"Jatigede",                provinsi:"Jawa Barat",         lon:108.09492,  lat:-6.856113,  luas:4122, mw:824.4,  status:"Selesai"},
+  {kode:"PLTST-17", nama:"Raknamo",                 provinsi:"Nusa Tenggara Timur",lon:123.935902, lat:-10.118817, luas:147,  mw:29.46,  status:"Selesai"},
+  {kode:"PLTST-18", nama:"Leuwikeris",              provinsi:"Jawa Barat",         lon:108.396146, lat:-7.360974,  luas:243,  mw:48.58,  status:"On Going"},
+  {kode:"PLTST-19", nama:"Tigadihaji",              provinsi:"Sumatera Selatan",   lon:103.876438, lat:-4.629415,  luas:468,  mw:93.6,   status:"On Going"},
+  {kode:"PLTST-20", nama:"Prijetan",                provinsi:"Jawa Timur",         lon:112.213056, lat:-7.223056,  luas:170,  mw:34,     status:"Eksisting"},
+  {kode:"PLTST-21", nama:"Situ Kamojing",           provinsi:"Jawa Barat",         lon:107.45,     lat:-6.43379,   luas:628,  mw:125.6,  status:"Eksisting"},
+  {kode:"PLTST-22", nama:"Cipancuh",                provinsi:"Jawa Barat",         lon:107.955196, lat:-6.494036,  luas:354,  mw:70.73,  status:"Eksisting"},
+  {kode:"PLTST-23", nama:"Pacal",                   provinsi:"Jawa Timur",         lon:111.870273, lat:-7.36642,   luas:520,  mw:104,    status:"Eksisting"},
+  {kode:"PLTST-24", nama:"Penjalin",                provinsi:"Jawa Tengah",        lon:109.049444, lat:-7.328333,  luas:120,  mw:24,     status:"Eksisting"},
+  {kode:"PLTST-25", nama:"Jombor",                  provinsi:"Jawa Tengah",        lon:110.63338,  lat:-7.754192,  luas:167,  mw:33.33,  status:"Eksisting"},
+  {kode:"PLTST-26", nama:"Kedung Bendo",            provinsi:"Jawa Timur",         lon:111.58867,  lat:-7.934071,  luas:353,  mw:70.6,   status:"Eksisting"},
+  {kode:"PLTST-27", nama:"Gembong",                 provinsi:"Jawa Tengah",        lon:110.957569, lat:-6.695881,  luas:110,  mw:22,     status:"Eksisting"},
+  {kode:"PLTST-28", nama:"Cacaban",                 provinsi:"Jawa Tengah",        lon:109.18624,  lat:-7.00649,   luas:763,  mw:152.6,  status:"Eksisting"},
+  {kode:"PLTST-29", nama:"Darma",                   provinsi:"Jawa Barat",         lon:108.409835, lat:-7.003451,  luas:392,  mw:78.4,   status:"Eksisting"},
+  {kode:"PLTST-30", nama:"Lahor",                   provinsi:"Jawa Timur",         lon:112.455145, lat:-8.14695,   luas:260,  mw:52,     status:"Eksisting"},
+  {kode:"PLTST-31", nama:"Klampis",                 provinsi:"Jawa Timur",         lon:113.220833, lat:-7.099722,  luas:244,  mw:48.8,   status:"Eksisting"},
+  {kode:"PLTST-32", nama:"Way Jepara",              provinsi:"Lampung",            lon:105.672665, lat:-5.211921,  luas:310,  mw:62,     status:"Eksisting"},
+  {kode:"PLTST-33", nama:"Samboja",                 provinsi:"Kalimantan Timur",   lon:117.048542, lat:-1.046559,  luas:202,  mw:40.37,  status:"Eksisting"},
+  {kode:"PLTST-34", nama:"Lempake",                 provinsi:"Kalimantan Timur",   lon:117.192996, lat:-0.407968,  luas:135,  mw:27.08,  status:"Eksisting"},
+  {kode:"PLTST-35", nama:"Parangjoho",              provinsi:"Jawa Tengah",        lon:110.817267, lat:-7.951226,  luas:200,  mw:40,     status:"Eksisting"},
+  {kode:"PLTST-36", nama:"Batujai",                 provinsi:"Nusa Tenggara Barat",lon:116.270556, lat:-8.729722,  luas:101,  mw:20.16,  status:"Eksisting"},
+  {kode:"PLTST-37", nama:"Bringe",                  provinsi:"Nusa Tenggara Barat",lon:116.422755, lat:-8.723195,  luas:170,  mw:33.92,  status:"Eksisting"},
+  {kode:"PLTST-38", nama:"Wonogiri/Gadjah Mungkur", provinsi:"Jawa Tengah",        lon:110.897016, lat:-7.897552,  luas:6386, mw:1277.2, status:"Eksisting"},
+  {kode:"PLTST-39", nama:"Way Rarem",               provinsi:"Lampung",            lon:104.785113, lat:-4.925719,  luas:419,  mw:83.7,   status:"Eksisting"},
+  {kode:"PLTST-40", nama:"Gondang",                 provinsi:"Jawa Timur",         lon:112.268333, lat:-7.209167,  luas:386,  mw:77.18,  status:"Eksisting"},
+  {kode:"PLTST-41", nama:"Klego",                   provinsi:"Jawa Tengah",        lon:110.705127, lat:-7.360576,  luas:686,  mw:137.2,  status:"Eksisting"},
+  {kode:"PLTST-42", nama:"Tiu Kulit",               provinsi:"Nusa Tenggara Barat",lon:117.679188, lat:-8.690928,  luas:110,  mw:22,     status:"Eksisting"},
+  {kode:"PLTST-43", nama:"Kali Ujung",              provinsi:"Nusa Tenggara Barat",lon:116.4585,   lat:-8.7246,    luas:160,  mw:32,     status:"Eksisting"},
+  {kode:"PLTST-44", nama:"Pondok",                  provinsi:"Jawa Timur",         lon:111.564771, lat:-7.407306,  luas:380,  mw:76,     status:"Eksisting"},
+  {kode:"PLTST-45", nama:"Kalola",                  provinsi:"Sulawesi Tengah",    lon:124.072003, lat:0.802586,   luas:1300, mw:260,    status:"Eksisting"},
+  {kode:"PLTST-46", nama:"Sermo",                   provinsi:"DI Yogyakarta",      lon:110.085,    lat:-7.812,     luas:157,  mw:31.4,   status:"Eksisting"},
+  {kode:"PLTST-47", nama:"Manggar",                 provinsi:"Kalimantan Timur",   lon:116.918109, lat:-1.16772,   luas:403,  mw:80.6,   status:"Eksisting"},
+  {kode:"PLTST-48", nama:"Gapit",                   provinsi:"Nusa Tenggara Barat",lon:117.930489, lat:-8.793409,  luas:225,  mw:45,     status:"Eksisting"},
+  {kode:"PLTST-49", nama:"Simo",                    provinsi:"Jawa Tengah",        lon:111.098079, lat:-7.201565,  luas:135,  mw:27,     status:"Eksisting"},
+  {kode:"PLTST-50", nama:"Salomekko",               provinsi:"Sulawesi Selatan",   lon:120.231106, lat:-4.963054,  luas:104,  mw:20.8,   status:"Eksisting"},
+  {kode:"PLTST-51", nama:"Bili Bili",               provinsi:"Sulawesi Selatan",   lon:119.580491, lat:-5.258501,  luas:1590, mw:318,    status:"Eksisting"},
+  {kode:"PLTST-52", nama:"Sumi",                    provinsi:"Nusa Tenggara Barat",lon:118.953886, lat:-8.641902,  luas:163,  mw:32.6,   status:"Eksisting"},
+  {kode:"PLTST-53", nama:"Sangiran",                provinsi:"Jawa Tengah",        lon:111.615126, lat:-7.410903,  luas:145,  mw:28.98,  status:"Eksisting"},
+  {kode:"PLTST-54", nama:"Grokgak",                 provinsi:"Bali",               lon:114.781427, lat:-8.214445,  luas:295,  mw:59,     status:"Eksisting"},
+  {kode:"PLTST-55", nama:"Tilong",                  provinsi:"Nusa Tenggara Timur",lon:123.744691, lat:-10.175975, luas:162,  mw:32.38,  status:"Eksisting"},
+  {kode:"PLTST-56", nama:"Pelaperado",              provinsi:"Nusa Tenggara Barat",lon:118.606953, lat:-8.720699,  luas:104,  mw:20.84,  status:"Eksisting"},
+  {kode:"PLTST-57", nama:"Keuliling",               provinsi:"Aceh",               lon:95.480199,  lat:5.365509,   luas:260,  mw:51.99,  status:"Eksisting"},
+  {kode:"PLTST-58", nama:"Beriwit",                 provinsi:"Kalimantan Tengah",  lon:117.667853, lat:2.142123,   luas:330,  mw:66.07,  status:"Eksisting"},
+  {kode:"PLTST-59", nama:"Gegurik",                 provinsi:"Nusa Tenggara Barat",lon:116.34627,  lat:-8.257877,  luas:133,  mw:26.6,   status:"Eksisting"},
+  {kode:"PLTST-60", nama:"Jati Barang",             provinsi:"Jawa Tengah",        lon:110.350278, lat:-7.036667,  luas:110,  mw:22,     status:"Eksisting"},
+  {kode:"PLTST-61", nama:"Tanju",                   provinsi:"Nusa Tenggara Barat",lon:118.349215, lat:-8.472337,  luas:288,  mw:57.58,  status:"Selesai"},
+  {kode:"PLTST-62", nama:"Sei Gong",                provinsi:"Kepulauan Riau",     lon:104.217839, lat:0.725904,   luas:356,  mw:71.2,   status:"Selesai"},
+  {kode:"PLTST-63", nama:"Tapin",                   provinsi:"Kalimantan Selatan", lon:115.340632, lat:-2.944034,  luas:425,  mw:85,     status:"Selesai"},
+  {kode:"PLTST-64", nama:"Sindang Heula",           provinsi:"Banten",             lon:106.112845, lat:-6.181459,  luas:130,  mw:25.9,   status:"Selesai"},
+  {kode:"PLTST-65", nama:"Kuningan",                provinsi:"Jawa Barat",         lon:108.703193, lat:-7.067854,  luas:222,  mw:44.32,  status:"Selesai"},
+  {kode:"PLTST-66", nama:"Way Sekampung",           provinsi:"Lampung",            lon:104.918286, lat:-5.333469,  luas:825,  mw:165,    status:"Selesai"},
+  {kode:"PLTST-67", nama:"Paselloreng",             provinsi:"Sulawesi Selatan",   lon:120.180929, lat:-3.883281,  luas:1283, mw:256.68, status:"Selesai"},
+  {kode:"PLTST-68", nama:"Bendo",                   provinsi:"Jawa Timur",         lon:111.58867,  lat:-7.904071,  luas:170,  mw:33.93,  status:"Selesai"},
+  {kode:"PLTST-69", nama:"Ladongi",                 provinsi:"Sulawesi Tenggara",  lon:121.889292, lat:-4.149433,  luas:213,  mw:42.6,   status:"Selesai"},
+  {kode:"PLTST-70", nama:"Pidekso",                 provinsi:"Jawa Tengah",        lon:110.998779, lat:-8.037029,  luas:232,  mw:46.4,   status:"Selesai"},
+  {kode:"PLTST-71", nama:"Gongseng",                provinsi:"Jawa Timur",         lon:111.899676, lat:-7.36447,   luas:288,  mw:57.6,   status:"Selesai"},
+  {kode:"PLTST-72", nama:"Karalloe",                provinsi:"Sulawesi Selatan",   lon:119.803,    lat:-5.51464,   luas:249,  mw:49.7,   status:"Selesai"},
+  {kode:"PLTST-73", nama:"Bintang Bano",            provinsi:"Nusa Tenggara Barat",lon:116.987142, lat:-8.714842,  luas:256,  mw:51.28,  status:"Selesai"},
+  {kode:"PLTST-74", nama:"Randugunting",            provinsi:"Jawa Tengah",        lon:111.257247, lat:-6.874747,  luas:155,  mw:31.02,  status:"Selesai"},
+  {kode:"PLTST-75", nama:"Semantok",                provinsi:"Jawa Timur",         lon:111.890537, lat:-7.494603,  luas:293,  mw:58.6,   status:"Selesai"},
+  {kode:"PLTST-76", nama:"Sadawarna",               provinsi:"Jawa Tengah",        lon:107.848187, lat:-6.588152,  luas:681,  mw:136.3,  status:"Selesai"},
+  {kode:"PLTST-77", nama:"Beringin Sila",           provinsi:"Nusa Tenggara Barat",lon:117.127044, lat:-8.455236,  luas:126,  mw:25.2,   status:"Selesai"},
+  {kode:"PLTST-78", nama:"Kuwil Kawangkoan",        provinsi:"Sulawesi Utara",     lon:124.931313, lat:1.442479,   luas:139,  mw:27.8,   status:"Selesai"},
+  {kode:"PLTST-79", nama:"Margatiga",               provinsi:"Lampung",            lon:105.485403, lat:-5.207586,  luas:2314, mw:462.79, status:"On Going"},
+  {kode:"PLTST-80", nama:"Lolak",                   provinsi:"Sulawesi Utara",     lon:124.35,     lat:0.65,       luas:102,  mw:20.35,  status:"On Going"},
+  {kode:"PLTST-81", nama:"Cipanas",                 provinsi:"Jawa Barat",         lon:108.02356,  lat:-6.677649,  luas:1316, mw:263.19, status:"On Going"},
+  {kode:"PLTST-82", nama:"Sepaku Semoi",            provinsi:"Kalimantan Timur",   lon:116.842938, lat:-0.910116,  luas:335,  mw:66.93,  status:"On Going"},
+  {kode:"PLTST-83", nama:"Karian",                  provinsi:"Banten",             lon:106.283675, lat:-6.413397,  luas:1740, mw:348,    status:"On Going"},
+  {kode:"PLTST-84", nama:"Keureuto",                provinsi:"Aceh",               lon:97.157456,  lat:4.938447,   luas:896,  mw:179.28, status:"On Going"},
+  {kode:"PLTST-85", nama:"Rukoh",                   provinsi:"Aceh",               lon:95.894389,  lat:5.20275,    luas:716,  mw:143.22, status:"On Going"},
+  {kode:"PLTST-86", nama:"Tiu Suntuk",              provinsi:"Nusa Tenggara Barat",lon:116.9268,   lat:-8.7938,    luas:312,  mw:62.42,  status:"On Going"},
+  {kode:"PLTST-87", nama:"Lau Simeme",              provinsi:"Sumatera Utara",     lon:98.648528,  lat:3.371278,   luas:247,  mw:49.36,  status:"On Going"},
+  {kode:"PLTST-88", nama:"Temef",                   provinsi:"Nusa Tenggara Timur",lon:124.447253, lat:-9.718621,  luas:298,  mw:59.56,  status:"On Going"},
+  {kode:"PLTST-89", nama:"Pamukkulu",               provinsi:"Sulawesi Selatan",   lon:119.594029, lat:-5.3996,    luas:460,  mw:92,     status:"On Going"},
+  {kode:"PLTST-90", nama:"Ameroro",                 provinsi:"Sulawesi Tenggara",  lon:122.0089,   lat:-3.910486,  luas:244,  mw:48.81,  status:"On Going"},
+  {kode:"PLTST-91", nama:"Way Apu",                 provinsi:"Maluku",             lon:128.183282, lat:-3.076364,  luas:274,  mw:54.76,  status:"On Going"},
+  {kode:"PLTST-92", nama:"Bulango Ulu",             provinsi:"Gorontalo",          lon:123.096164, lat:0.659928,   luas:615,  mw:122.94, status:"On Going"},
+  {kode:"PLTST-93", nama:"Manikin",                 provinsi:"Nusa Tenggara Timur",lon:123.720577, lat:-10.222501, luas:165,  mw:33,     status:"On Going"},
+  {kode:"PLTST-94", nama:"Bener",                   provinsi:"Jawa Tengah",        lon:110.01984,  lat:-7.599535,  luas:313,  mw:62.6,   status:"On Going"},
+  {kode:"PLTST-95", nama:"Jragung",                 provinsi:"Jawa Tengah",        lon:110.549261, lat:-7.138277,  luas:451,  mw:90.26,  status:"On Going"},
+  {kode:"PLTST-96", nama:"Budong-Budong",           provinsi:"Sulawesi Barat",     lon:119.454444, lat:-2.016833,  luas:369,  mw:73.83,  status:"On Going"},
+  {kode:"PLTST-97", nama:"Marangkayu",              provinsi:"Kalimantan Timur",   lon:117.397854, lat:-0.109359,  luas:258,  mw:51.63,  status:"On Going"},
+  {kode:"PLTST-98", nama:"Mbay",                    provinsi:"Nusa Tenggara Timur",lon:121.283566, lat:-8.697125,  luas:499,  mw:99.89,  status:"Baru"},
+  {kode:"PLTST-99", nama:"Merangin",                provinsi:"Jambi",              lon:102.35,     lat:-2.08,      luas:687,  mw:137.35, status:"Baru"},
+  {kode:"PLTST-100",nama:"Cibeet",                  provinsi:"Jawa Barat",         lon:107.138428, lat:-6.511869,  luas:920,  mw:184.03, status:"Baru"},
+  {kode:"PLTST-101",nama:"Kedung Langgar",          provinsi:"Jawa Tengah",        lon:109.803431, lat:-6.977309,  luas:142,  mw:28.4,   status:"Baru"},
+  {kode:"PLTST-102",nama:"Cijurey",                 provinsi:"Jawa Barat",         lon:107.083897, lat:-6.549922,  luas:139,  mw:27.8,   status:"Baru"},
+  {kode:"PLTST-103",nama:"Bodri",                   provinsi:"Jawa Tengah",        lon:110.188963, lat:-7.093698,  luas:168,  mw:33.69,  status:"Baru"},
+  {kode:"PLTST-104",nama:"Riam Kiwa",               provinsi:"Kalimantan Selatan", lon:115.393884, lat:-3.090441,  luas:654,  mw:130.81, status:"Baru"},
+  {kode:"PLTST-105",nama:"Pelosika",                provinsi:"Sulawesi Tenggara",  lon:121.745836, lat:-3.766125,  luas:271,  mw:54.16,  status:"Baru"},
+  {kode:"PLTST-106",nama:"Jenelata",                provinsi:"Sulawesi Selatan",   lon:119.598947, lat:-5.290821,  luas:1220, mw:244,    status:"Baru"},
+  {kode:"PLTST-107",nama:"Karangnongko",            provinsi:"Jawa Timur",         lon:111.448472, lat:-7.264694,  luas:1027, mw:205.31, status:"Baru"},
+  {kode:"PLTST-108",nama:"Abusur",                  provinsi:"Maluku",             lon:127.183282, lat:-8.076364,  luas:170,  mw:33.92,  status:"Eksisting"},
+];
+
+// ── ASSIGN REGION ─────────────────────────────────────────────────────────────
+function getRegion(d) {
+  for (const [key, rc] of Object.entries(REGIONS)) {
+    if (rc.provinces.some(p => d.provinsi.includes(p))) return key;
+  }
+  return 'mapana';
+}
+WADUK.forEach((d, i) => { d.region = getRegion(d); d.no = i + 1; });
+
+// ── SVG MARKER ────────────────────────────────────────────────────────────────
+let _uid = 0;
+function markerSvg(status, col, sz) {
+  const r = sz / 2, id = 'p' + (_uid++);
+  if (status === 'Selesai')
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}"><circle cx="${r}" cy="${r}" r="${r-1.2}" fill="${col}" stroke="rgba(255,255,255,0.8)" stroke-width="1"/></svg>`;
+  if (status === 'Eksisting')
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}"><defs><pattern id="${id}" patternUnits="userSpaceOnUse" width="3" height="3" patternTransform="rotate(45)"><rect width="1.5" height="3" fill="${col}"/></pattern><clipPath id="c${id}"><circle cx="${r}" cy="${r}" r="${r-1.8}"/></clipPath></defs><circle cx="${r}" cy="${r}" r="${r-1}" fill="white" stroke="${col}" stroke-width="1.5"/><circle cx="${r}" cy="${r}" r="${r-1.8}" fill="url(#${id})"/></svg>`;
+  if (status === 'On Going')
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}"><circle cx="${r}" cy="${r}" r="${r-1.5}" fill="rgba(255,255,255,0.15)" stroke="${col}" stroke-width="2" stroke-dasharray="2.8,2.2"/></svg>`;
+  if (status === 'Baru')
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}"><circle cx="${r}" cy="${r}" r="${r-1}" fill="white" stroke="${col}" stroke-width="1.5"/><circle cx="${r}" cy="${r}" r="${r*0.38}" fill="${col}"/></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}"><circle cx="${r}" cy="${r}" r="${r-1.2}" fill="${col}" stroke="white" stroke-width="1"/></svg>`;
+}
+function makeIcon(status, col, hover) {
+  const sz = hover ? 11 : 8, h = sz / 2;
+  return L.divIcon({ html: markerSvg(status, col, sz), className: '', iconSize:[sz,sz], iconAnchor:[h,h], popupAnchor:[h+6,-h] });
+}
+
+// ── CABLE LINE STYLE ─────────────────────────────────────────────────────────
+// Returns SVG stroke attributes string per status
+function cableStroke(status, col) {
+  if (status === 'Selesai')
+    return `stroke="${col}" stroke-width="2" fill="none"`;
+  if (status === 'Eksisting') {
+    // Use a dashed pattern that looks like the hatch/fill of the dot
+    return `stroke="${col}" stroke-width="3" fill="none" stroke-dasharray="6,2"`;
+  }
+  if (status === 'On Going')
+    return `stroke="${col}" stroke-width="2" fill="none" stroke-dasharray="5,4"`;
+  if (status === 'Baru')
+    return `stroke="${col}" stroke-width="2" fill="none" stroke-dasharray="2,3" stroke-linecap="round"`;
+  return `stroke="${col}" stroke-width="2" fill="none"`;
+}
+
+// ── MAP INIT ──────────────────────────────────────────────────────────────────
+const basemaps = {
+  'esri-street': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:19}),
+  'satellite':   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:19}),
+  'topo':        L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{attribution:'© OpenTopoMap (CC-BY-SA)',maxZoom:17,crossOrigin:'anonymous'}),
+  'dark':        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© CARTO',maxZoom:19}),
+  'osm':         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19,crossOrigin:'anonymous'}),
+};
+const map = L.map('map', {
+  center:[-2.5,118], zoom:5, minZoom:2, maxZoom:16,
+  layers: [basemaps['esri-street']],
+  zoomControl: false,
+});
+L.control.scale({imperial:false, position:'bottomright'}).addTo(map);
+
+// ── MARKERS ───────────────────────────────────────────────────────────────────
+const markerMap = {};
+WADUK.forEach(d => {
+  const rc  = REGIONS[d.region];
+  const col = rc ? rc.color : '#888';
+  const marker = L.marker([d.lat, d.lon], { icon: makeIcon(d.status, col, false) }).addTo(map);
+
+  const popupHtml = `
+    <div class="sw-popup">
+      <div class="sw-head" style="border-left-color:${col}">
+        <div class="sw-kode">${d.kode}</div>
+        <div class="sw-rtag" style="background:${col}22;color:${col}">${rc ? rc.label.toUpperCase() : ''}</div>
+        <div class="sw-nama">${d.nama}</div>
+        <div class="sw-prov">${d.provinsi}</div>
+      </div>
+      <div class="sw-div" style="background:${col}"></div>
+      <div class="sw-body">
+        <div>
+          <div class="sw-lbl">Luas Waduk</div>
+          <div class="sw-val" style="color:${col}">${d.luas.toLocaleString('id-ID')}<span class="sw-unit">Ha</span></div>
+        </div>
+        <div>
+          <div class="sw-lbl">Kapasitas</div>
+          <div class="sw-val" style="color:#9A6B00">${d.mw.toLocaleString('id-ID')}<span class="sw-unit">MW</span></div>
+        </div>
+      </div>
+      <div class="sw-foot">
+        <div style="line-height:0;flex-shrink:0">${markerSvg(d.status, col, 12)}</div>
+        <div class="sw-foot-lbl">${d.status}</div>
+      </div>
+    </div>`;
+
+  marker.bindPopup(popupHtml, { maxWidth:200, minWidth:200, autoPan:true, closeButton:true, offset:[106,0] });
+  marker.on('mouseover', function() { this.setIcon(makeIcon(d.status, col, true)); this.setZIndexOffset(1000); });
+  marker.on('mouseout',  function() { this.setIcon(makeIcon(d.status, col, false)); this.setZIndexOffset(0); });
+  markerMap[d.kode] = marker;
+});
+
+// ── CABLE ANNOTATIONS ─────────────────────────────────────────────────────────
+// When a region is selected, draw "rigid cable" lines from each marker to a label box.
+// Cable shape: elbow with 1 bend (horizontal/vertical)
+// Layout: alternate labels left/right of the marker, stagger vertically.
+
+const cableSvg = document.getElementById('cable-svg');
+const cableLabels = []; // DOM els for cleanup
+let   cableActive = false;
+
+function clearCables() {
+  while (cableSvg.firstChild) cableSvg.removeChild(cableSvg.firstChild);
+  cableLabels.forEach(el => el.parentNode && el.parentNode.removeChild(el));
+  cableLabels.length = 0;
+  cableActive = false;
+}
+
+function drawCables(regionKey) {
+  clearCables();
+  if (regionKey === 'all') return;
+
+  const rc    = REGIONS[regionKey];
+  const col   = rc.color;
+  const items = WADUK.filter(d => d.region === regionKey);
+  if (!items.length) return;
+  cableActive = true;
+
+  const mapEl   = document.getElementById('map');
+  const mapRect = mapEl.getBoundingClientRect();
+  const mapSection = document.getElementById('map-section');
+
+  // Give each marker a unique sequential number within the region
+  const sorted = [...items].sort((a, b) => {
+    const rA = REGIONS[a.region], rB = REGIONS[b.region];
+    return a.no - b.no;
+  });
+
+  // Label box dimensions
+  const LW = 155; // label width approx
+  const LH = 28;
+  const CABLE_STUB = 24; // horizontal segment out from dot
+  const ELBOW_V    = 10; // vertical segment then horizontal to box
+
+  sorted.forEach((d, idx) => {
+    const m = markerMap[d.kode];
+    if (!m || !map.hasLayer(m)) return;
+
+    const pt = map.latLngToContainerPoint([d.lat, d.lon]);
+    const mx = pt.x, my = pt.y;
+
+    // Alternate label side: even → right, odd → left
+    const side = idx % 2 === 0 ? 'right' : 'left';
+
+    // Vertical stagger offset so labels don't stack
+    const vertStep = LH + 6;
+    const groupSize = Math.ceil(sorted.length / 2);
+    let vIdx, totalInGroup;
+    if (side === 'right') {
+      vIdx = Math.floor(idx / 2);
+      totalInGroup = Math.ceil(sorted.length / 2);
+    } else {
+      vIdx = Math.floor((idx - 1) / 2);
+      totalInGroup = Math.floor(sorted.length / 2);
+    }
+
+    // place label y near marker y but offset by index
+    const baseY = my - (totalInGroup * vertStep) / 2 + vIdx * vertStep;
+
+    // Label box position
+    let lx, ly;
+    const margin = 18;
+    if (side === 'right') {
+      lx = mx + CABLE_STUB + 12;
+      // clamp to map bounds
+      lx = Math.min(lx, mapRect.width - LW - margin);
+    } else {
+      lx = mx - CABLE_STUB - 12 - LW;
+      lx = Math.max(lx, margin);
+    }
+    ly = baseY - LH / 2;
+    ly = Math.max(margin, Math.min(ly, mapRect.height - LH - margin));
+
+    // Cable path: dot → elbow → label edge
+    // dot centre
+    const dx = mx, dy = my;
+    // elbow point (same y as label centre)
+    const labelCY = ly + LH / 2;
+    let ex, ey, lEdgeX, lEdgeY;
+    if (side === 'right') {
+      ex = mx + CABLE_STUB;
+      ey = my;
+      // then go vertical to label y, then horizontal to label left edge
+      lEdgeX = lx;
+      lEdgeY = labelCY;
+    } else {
+      ex = mx - CABLE_STUB;
+      ey = my;
+      lEdgeX = lx + LW;
+      lEdgeY = labelCY;
+    }
+
+    // SVG path: dot→elbow→corner→label edge (rigid, 2 segments)
+    const pathD = `M${dx},${dy} L${ex},${ey} L${lEdgeX},${lEdgeY}`;
+    const strokeAttr = cableStroke(d.status, col);
+    const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    pathEl.setAttribute('d', pathD);
+    const attrs = strokeAttr.match(/(\S+)="([^"]*)"/g) || [];
+    attrs.forEach(a => {
+      const [k, v] = a.split('=');
+      pathEl.setAttribute(k, v.replace(/"/g,''));
+    });
+    cableSvg.appendChild(pathEl);
+
+    // Label DOM element
+    const labelEl = document.createElement('div');
+    labelEl.className = 'cable-label';
+    labelEl.style.left = (mapRect.left - mapSection.getBoundingClientRect().left + lx) + 'px';
+    labelEl.style.top  = (mapRect.top  - mapSection.getBoundingClientRect().top  + ly) + 'px';
+    labelEl.style.width = LW + 'px';
+    labelEl.style.height = LH + 'px';
+    labelEl.style.borderLeft = `3px solid ${col}`;
+
+    // Determine regional no (1-based within this region's sorted list)
+    const regionNo = idx + 1;
+
+    labelEl.innerHTML = `
+      <div class="cable-label-no" style="background:${col}">${regionNo}</div>
+      <div style="flex:1;overflow:hidden">
+        <div class="cable-label-nama" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.nama}</div>
+      </div>
+      <div class="cable-label-mw">${d.mw} MW</div>`;
+    mapSection.appendChild(labelEl);
+    cableLabels.push(labelEl);
+  });
+}
+
+function refreshCables(regionKey) {
+  if (!cableActive && regionKey === 'all') return;
+  drawCables(regionKey);
+}
+
+// Redraw cables on map move/zoom
+let cableRegion = 'all';
+map.on('moveend zoomend', () => { if (cableRegion !== 'all') drawCables(cableRegion); });
+
+// ── ZOOM CONTROLS ─────────────────────────────────────────────────────────────
+// ── BASEMAP PICKER ────────────────────────────────────────────────────────────
+let activeBmKey = 'esri-street';
+
+const btnBm  = document.getElementById('btn-basemap');
+const bmMenu = document.getElementById('basemap-menu');
+
+// Toggle menu
+btnBm.addEventListener('click', (e) => {
+  e.stopPropagation();
+  bmMenu.classList.toggle('open');
+});
+document.addEventListener('click', () => bmMenu.classList.remove('open'));
+
+// Pick basemap
+bmMenu.querySelectorAll('.bm-item').forEach(item => {
+  item.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const key = item.dataset.bm;
+    if (key === activeBmKey) { bmMenu.classList.remove('open'); return; }
+    // Remove old
+    if (basemaps[activeBmKey] && map.hasLayer(basemaps[activeBmKey])) {
+      map.removeLayer(basemaps[activeBmKey]);
+    }
+    // Add new
+    basemaps[key].addTo(map);
+    basemaps[key].bringToBack();
+    activeBmKey = key;
+    // Update UI
+    bmMenu.querySelectorAll('.bm-item').forEach(b => b.classList.remove('active'));
+    item.classList.add('active');
+    bmMenu.classList.remove('open');
+  });
+});
+
+document.getElementById('btn-zoom-in').addEventListener('click',  () => map.zoomIn());
+document.getElementById('btn-zoom-out').addEventListener('click', () => map.zoomOut());
+document.getElementById('btn-reset-view').addEventListener('click', () => {
+  map.setView([-2.5,118], 5);
+  applyFilter('all');
+});
+
+// ── FULLSCREEN ────────────────────────────────────────────────────────────────
+const fsBtn  = document.getElementById('btn-fullscreen');
+const fsExp  = document.getElementById('fs-expand');
+const fsColl = document.getElementById('fs-collapse');
+const fsLbl  = document.getElementById('fs-btn-lbl');
+const INDONESIA_BOUNDS = L.latLngBounds(L.latLng(-11,95), L.latLng(6,141));
+fsBtn.addEventListener('click', () => {
+  const ms = document.getElementById('map-section');
+  if (!document.fullscreenElement) {
+    ms.requestFullscreen && ms.requestFullscreen();
+  } else {
+    document.exitFullscreen && document.exitFullscreen();
+  }
+});
+document.addEventListener('fullscreenchange', () => {
+  const isFs = !!document.fullscreenElement;
+  fsExp.style.display  = isFs ? 'none' : '';
+  fsColl.style.display = isFs ? '' : 'none';
+  fsLbl.textContent    = isFs ? 'Keluar Layar Penuh' : 'Layar Penuh';
+  // Buka lock saat fullscreen, kembalikan saat keluar
+  if (isFs) {
+    map.setMaxBounds(null);
+    map.setMinZoom(2);
+  } else {
+    map.setMaxBounds(INDONESIA_BOUNDS);
+    map.setMinZoom(4);
+  }
+  setTimeout(() => map.invalidateSize(), 100);
+});
+
+// ── SEARCH ────────────────────────────────────────────────────────────────────
+const si = document.getElementById('search-input');
+const sr = document.getElementById('search-results');
+si.addEventListener('input', () => {
+  const q = si.value.toLowerCase().trim();
+  sr.innerHTML = '';
+  if (!q) { sr.style.display='none'; return; }
+  const hits = WADUK.filter(d => d.nama.toLowerCase().includes(q) || d.provinsi.toLowerCase().includes(q)).slice(0,8);
+  if (!hits.length) { sr.style.display='none'; return; }
+  hits.forEach(d => {
+    const el = document.createElement('div'); el.className='sr-item';
+    el.innerHTML=`${d.nama}<div class="sr-sub">${d.provinsi} — ${d.mw} MW</div>`;
+    el.addEventListener('click', () => {
+      map.setView([d.lat,d.lon],12);
+      markerMap[d.kode]&&markerMap[d.kode].openPopup();
+      sr.style.display='none'; si.value=d.nama;
+    });
+    sr.appendChild(el);
+  });
+  sr.style.display='block';
+});
+document.addEventListener('click', e => { if(!e.target.closest('#search-wrap')) sr.style.display='none'; });
+map.on('mousemove', e => {
+  document.getElementById('coords-display').textContent = `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+});
+
+// ── BUILD SECTIONS ────────────────────────────────────────────────────────────
+function buildSections() {
+  const wrap = document.getElementById('sections-wrap');
+  wrap.innerHTML = '';
+  const order = ['sumatera','jamali','kalimantan','sulawesi','mapana'];
+
+  order.forEach((rKey, ri) => {
+    const rc    = REGIONS[rKey];
+    const items = WADUK.filter(d => d.region === rKey);
+    const totMW = items.reduce((s,d)=>s+d.mw,0);
+    const totHa = items.reduce((s,d)=>s+d.luas,0);
+
+    const sec = document.createElement('div');
+    sec.className='region-section'; sec.dataset.region=rKey; sec.id=`section-${rKey}`;
+    sec.style.borderTopColor=rc.color;
+    sec.innerHTML=`
+      <div class="region-header">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+            <div style="width:13px;height:13px;border-radius:50%;background:${rc.color};flex-shrink:0"></div>
+            <div class="region-name">${rc.label}</div>
+          </div>
+          <div class="region-sub">${rc.sub}</div>
+        </div>
+        <div class="region-stats">
+          <div class="reg-stat"><div class="v" style="color:${rc.color}">${items.length}</div><div class="l">Lokasi</div></div>
+          <div class="reg-stat"><div class="v" style="color:${rc.color}">${totMW.toLocaleString('id-ID',{maximumFractionDigits:0})} MW</div><div class="l">Total Potensi</div></div>
+          <div class="reg-stat"><div class="v" style="color:${rc.color}">${totHa.toLocaleString('id-ID',{maximumFractionDigits:0})} Ha</div><div class="l">Total Luas</div></div>
+        </div>
+      </div>
+      <div class="cards-grid" id="grid-${rKey}"></div>
+      <div style="height:20px"></div>`;
+    wrap.appendChild(sec);
+    if (ri < order.length-1) {
+      const dv=document.createElement('div'); dv.className='section-divider'; dv.dataset.region=rKey; wrap.appendChild(dv);
+    }
+
+    const grid = sec.querySelector(`#grid-${rKey}`);
+    const regionItems = [...items].sort((a,b)=>b.mw-a.mw);
+    regionItems.forEach((d, idx) => {
+      const card=document.createElement('div'); card.className='w-card';
+      card.innerHTML=`
+        <div class="w-card-accent" style="background:${rc.color}"></div>
+        <div class="w-card-head">
+          <div class="w-card-no">No. ${idx+1}</div>
+          <div class="w-card-nama">${d.nama}</div>
+          <div class="w-card-prov">${d.provinsi}</div>
+        </div>
+        <div class="w-card-divider"></div>
+        <div class="w-card-data">
+          <div>
+            <div class="w-card-label">Luas</div>
+            <div class="w-card-val" style="color:${rc.color}">${d.luas.toLocaleString('id-ID')}<span class="w-card-unit">Ha</span></div>
+          </div>
+          <div>
+            <div class="w-card-label">Kapasitas</div>
+            <div class="w-card-val" style="color:#9A6B00">${d.mw.toLocaleString('id-ID')}<span class="w-card-unit">MW</span></div>
+          </div>
+        </div>
+        <div class="w-card-footer">
+          <div style="line-height:0;flex-shrink:0">${markerSvg(d.status, rc.color, 11)}</div>
+          <div class="w-card-status-lbl">${d.status}</div>
+        </div>`;
+      card.addEventListener('click', () => {
+        map.setView([d.lat,d.lon],12);
+        markerMap[d.kode]&&markerMap[d.kode].openPopup();
+        window.scrollTo({top:0,behavior:'smooth'});
+      });
+      grid.appendChild(card);
+    });
+  });
+}
+buildSections();
+
+// ── FILTER + CABLES ───────────────────────────────────────────────────────────
+function applyFilter(region) {
+  cableRegion = region;
+
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.remove('active');
+    if (b.dataset.region===region) b.classList.add('active');
+  });
+
+  // Toggle wilayah legend section
+  const legWilayah = document.getElementById('leg-wilayah');
+  if (legWilayah) legWilayah.style.display = region === 'all' ? '' : 'none';
+
+  WADUK.forEach(d => {
+    const m = markerMap[d.kode]; if (!m) return;
+    const show = region==='all'||d.region===region;
+    show?(!map.hasLayer(m)&&m.addTo(map)):(map.hasLayer(m)&&map.removeLayer(m));
+  });
+
+  document.querySelectorAll('.region-section').forEach(el => {
+    el.style.display=(region==='all'||el.dataset.region===region)?'':'none';
+  });
+  document.querySelectorAll('.section-divider').forEach(el => {
+    el.style.display=region==='all'?'':'none';
+  });
+
+  if (region!=='all') {
+    const items=WADUK.filter(d=>d.region===region);
+    if (items.length) {
+      const lats=items.map(d=>d.lat), lons=items.map(d=>d.lon);
+      map.fitBounds(
+        [[Math.min(...lats)-.5,Math.min(...lons)-.5],[Math.max(...lats)+.5,Math.max(...lons)+.5]],
+        {padding:[40,40],maxZoom:8}
+      );
+    }
+    // Draw cables after map settles
+    setTimeout(() => drawCables(region), 450);
+  } else {
+    clearCables();
+    map.setView([-2.5,118],5);
+  }
+}
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => applyFilter(btn.dataset.region));
+});
+
+// ── EXPORT FEATURE ────────────────────────────────────────────────────────────
+let expMap = null;
+
+function initExpMap() {
+  if (expMap) return;
+  expMap = L.map('exp-map', {
+    zoomControl:false, attributionControl:false,
+    dragging:false, scrollWheelZoom:false, doubleClickZoom:false,
+    touchZoom:false, keyboard:false, zoomSnap:0,
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© CARTO',maxZoom:19}).addTo(expMap);
+}
+
+let expMapReady = false;
+
+function buildExportSheet() {
+  initExpMap();
+  expMapReady = false;
+
+  // Clear markers
+  expMap.eachLayer(l => { if (l instanceof L.Marker) expMap.removeLayer(l); });
+
+  // Tambah semua marker dengan warna wilayah
+  WADUK.forEach(d => {
+    const rc  = REGIONS[d.region];
+    const col = rc ? rc.color : '#888';
+    L.marker([d.lat, d.lon], {
+      icon: L.divIcon({ html: markerSvg(d.status, col, 13), className:'', iconSize:[13,13], iconAnchor:[6,6] })
+    }).addTo(expMap);
+  });
+
+  // Tunggu tiles selesai load baru sembunyikan loading
+  expMap.once('load', () => {
+    expMapReady = true;
+    document.getElementById('exp-loading').classList.remove('show');
+  });
+  // Fallback jika event tidak tembak
+  setTimeout(() => {
+    expMapReady = true;
+    document.getElementById('exp-loading').classList.remove('show');
+  }, 3000);
+
+  setTimeout(() => {
+    expMap.invalidateSize();
+    expMap.setView([-3, 117], 4.8);
+    buildExpLegendBar();
+    buildExpRegionCards();
+  }, 350);
+}
+
+function buildExpLegendBar() {
+  const bar = document.getElementById('exp-legend-bar');
+  if (!bar) return;
+
+  const regions = Object.entries(REGIONS);
+  const statuses = [
+    { key:'Eksisting', label:'Eksisting' },
+    { key:'Selesai',   label:'Selesai' },
+    { key:'On Going',  label:'On Going' },
+    { key:'Baru',      label:'Baru' },
+  ];
+
+  let html = '';
+
+  // Section 1 — Wilayah
+  html += `<div class="exp-leg-section">
+    <div class="exp-leg-section-lbl">Wilayah</div>
+    <div class="exp-leg-row">`;
+  regions.forEach(([k, r]) => {
+    html += `<div class="exp-leg-item">
+      <svg width="10" height="10"><circle cx="5" cy="5" r="4.5" fill="${r.color}"/></svg>
+      <span>${r.label}</span>
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  // Divider
+  html += `<div class="exp-leg-divider"></div>`;
+
+  // Section 2 — Status
+  html += `<div class="exp-leg-section">
+    <div class="exp-leg-section-lbl">Status Waduk</div>
+    <div class="exp-leg-row">`;
+  statuses.forEach(s => {
+    html += `<div class="exp-leg-item">
+      <div style="line-height:0;flex-shrink:0">${markerSvg(s.key, '#555', 11)}</div>
+      <span>${s.label}</span>
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  // Divider
+  html += `<div class="exp-leg-divider"></div>`;
+
+  // Section 3 — Sumber
+  html += `<div class="exp-leg-section" style="margin-left:auto">
+    <div class="exp-leg-section-lbl">Sumber Data</div>
+    <div style="font-size:7px;color:#4A5A6A;line-height:1.5;">
+      RUPTL PLN 2025–2034<br>Kementerian ESDM (EBTKE) 2024
+    </div>
+  </div>`;
+
+  bar.innerHTML = html;
+}
+
+function buildExpRegionCards() {
+  const wrap = document.getElementById('exp-region-cards');
+  const COLS     = 3;
+  const MAX_ROWS = 10;
+
+  // Buat semua item flat dengan info wilayah
+  const allItems = [];
+  Object.entries(REGIONS).forEach(([key, rc]) => {
+    const items = WADUK.filter(d => d.region === key);
+    items.forEach((d, i) => allItems.push({ d, rc, localIdx: i, isFirst: i === 0 }));
+  });
+
+  // Pack items ke kolom, maks MAX_ROWS per kolom
+  // Header wilayah dihitung 1 baris
+  const columns = [];
+  let col = [], rowCount = 0;
+  allItems.forEach(item => {
+    // Hitung berapa baris yang akan ditambahkan item ini
+    const cost = item.isFirst ? 2 : 1; // header=1 + colhead=1 saat isFirst, atau 1 baris data saja
+    if (rowCount + cost > MAX_ROWS && col.length > 0) {
+      columns.push(col);
+      col = []; rowCount = 0;
+    }
+    col.push(item);
+    rowCount += cost;
+  });
+  if (col.length) columns.push(col);
+
+  // Bagi kolom ke grid baris (COLS per baris)
+  const rows = [];
+  for (let i = 0; i < columns.length; i += COLS)
+    rows.push(columns.slice(i, i + COLS));
+
+  let html = '';
+  rows.forEach(rowCols => {
+    while (rowCols.length < COLS) rowCols.push(null);
+    html += `<div class="exp-cards-row">`;
+    rowCols.forEach(colItems => {
+      html += `<div class="exp-col-wrap">`;
+      if (!colItems) { html += `</div>`; return; }
+
+      let lastKey = null;
+      colItems.forEach(({ d, rc, localIdx, isFirst }) => {
+        const regionKey = rc.label;
+        if (regionKey !== lastKey) {
+          if (lastKey !== null) html += `</div>`;
+          html += `<div class="exp-subcol" style="border-top:2px solid ${rc.color}">`;
+          html += `<div class="exp-rtable-head" style="border-color:${rc.color}">
+            <div class="exp-rtable-dot" style="background:${rc.color}"></div>
+            <span class="exp-rtable-name" style="color:${rc.color}">${rc.label}</span>
+          </div>`;
+          html += `<div class="exp-rtable-colhead">
+            <span>No</span><span>Nama</span><span>MW</span><span></span>
+          </div>`;
+          lastKey = regionKey;
+        }
+        html += `<div class="exp-waduk-row">
+          <span class="exp-waduk-no">${localIdx+1}</span>
+          <span class="exp-waduk-nama" title="${d.nama}">${d.nama}</span>
+          <span class="exp-waduk-mw" style="color:${rc.color}">${d.mw.toLocaleString('id-ID',{maximumFractionDigits:1})}</span>
+          <span class="exp-waduk-ico">${markerSvg(d.status, rc.color, 9)}</span>
+        </div>`;
+      });
+      if (lastKey !== null) html += `</div>`;
+      html += `</div>`;
+    });
+    html += `</div>`;
+  });
+
+  wrap.innerHTML = html;
+  document.getElementById('export-sheet').style.width = '960px';
+}
+
+// Open modal
+document.getElementById('btn-export').addEventListener('click', () => {
+  document.getElementById('export-modal').classList.add('open');
+  document.getElementById('exp-loading').classList.add('show');
+  document.getElementById('exp-loading-txt').textContent = 'Memuat peta…';
+  setTimeout(() => buildExportSheet(), 200);
+});
+
+document.getElementById('export-close').addEventListener('click', () => {
+  document.getElementById('export-modal').classList.remove('open');
+});
+document.getElementById('export-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('export-modal'))
+    document.getElementById('export-modal').classList.remove('open');
+});
+
+// Download PNG
+document.getElementById('btn-dl-png').addEventListener('click', async () => {
+  if (!expMapReady) { alert('Peta masih dimuat, tunggu sebentar.'); return; }
+  const btn = document.getElementById('btn-dl-png');
+  btn.classList.add('loading'); btn.textContent = 'Memproses...';
+  buildExpLegendBar();
+  buildExpRegionCards();
+  await new Promise(r => setTimeout(r, 600));
+  try {
+    const sheet = document.getElementById('export-sheet');
+    const wrap  = document.getElementById('export-canvas-wrap');
+
+    // Pindah sheet ke body sementara agar tidak terpotong scroll container
+    const placeholder = document.createElement('div');
+    placeholder.style.cssText = 'width:960px;height:1px;';
+    wrap.insertBefore(placeholder, sheet);
+
+    sheet.style.position = 'fixed';
+    sheet.style.top = '-99999px';
+    sheet.style.left = '0';
+    sheet.style.zIndex = '99999';
+    document.body.appendChild(sheet);
+
+    await new Promise(r => setTimeout(r, 200));
+
+    const canvas = await html2canvas(sheet, {
+      scale:4, useCORS:true, allowTaint:true, logging:false,
+      backgroundColor:'#fff', imageTimeout:30000,
+      width: sheet.scrollWidth,
+      height: sheet.scrollHeight,
+    });
+
+    // Kembalikan sheet ke posisi semula
+    sheet.style.position = '';
+    sheet.style.top = '';
+    sheet.style.left = '';
+    sheet.style.zIndex = '';
+    wrap.insertBefore(sheet, placeholder);
+    placeholder.remove();
+
+    const a = document.createElement('a');
+    a.download = `PLTS_Terapung_Nasional_RUPTL2025-2034.png`;
+    a.href = canvas.toDataURL('image/png'); a.click();
+  } catch(e) {
+    alert('Gagal export: ' + e.message);
+    // Pastikan sheet kembali jika error
+    const sheet2 = document.querySelector('#export-sheet');
+    if (sheet2 && sheet2.parentElement === document.body) {
+      document.getElementById('export-canvas-wrap').appendChild(sheet2);
+      sheet2.style.position = '';
+    }
+  } finally {
+    btn.classList.remove('loading');
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download PNG`;
+  }
+});
+// ── GEOJSON EMBEDDED ────────────────────────────────────────
+var GEO_EMBEDDED = {};
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  BAHAYA GEMPA — COG Rendering                               ║
+// ╚══════════════════════════════════════════════════════════════╝
+(function(){
+  'use strict';
+
+  var opacity = 0.50;
+  var cogLayer = null;
+  var cogMin = 0, cogMax = 1;
+
+  // Blue → Red colormap for drought hazard
+  function droughtColor(t) {
+    var r, g, b;
+    if (t < 0.25) {
+      var s = t / 0.25;
+      r = Math.round(0 + s * 50); g = Math.round(0 + s * 100); b = Math.round(180 + s * 75);
+    } else if (t < 0.5) {
+      var s = (t - 0.25) / 0.25;
+      r = Math.round(50 + s * 50); g = Math.round(100 + s * 155); b = Math.round(255 - s * 55);
+    } else if (t < 0.75) {
+      var s = (t - 0.5) / 0.25;
+      r = Math.round(100 + s * 155); g = Math.round(255 - s * 100); b = Math.round(200 - s * 180);
+    } else {
+      var s = (t - 0.75) / 0.25;
+      r = 255; g = Math.round(155 - s * 155); b = Math.round(20 - s * 20);
+    }
+    return [r, g, b];
+  }
+
+  function drawCB(mn, mx) {
+    var cv = document.getElementById('cb-canvas');
+    if (!cv) return;
+    var pw = cv.parentElement.clientWidth - 22;
+    cv.width = pw; cv.height = 12;
+    cv.style.width = pw + 'px';
+    var ctx = cv.getContext('2d');
+    for (var x = 0; x < pw; x++) {
+      var rgb = droughtColor(x / (pw - 1));
+      ctx.fillStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
+      ctx.fillRect(x, 0, 1, 12);
+    }
+    var ids = ['cb-t0','cb-t1','cb-t2','cb-t3','cb-t4'];
+    var r = mx - mn;
+    ids.forEach(function(id, i) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = (mn + r * i / 4).toFixed(1);
+    });
+  }
+
+  function applyOpacity() {
+    if (cogLayer) cogLayer.setOpacity(opacity);
+  }
+
+  async function loadCOG() {
+    var cb = document.getElementById('irad-cb');
+    try {
+      var response = await fetch('Gempa_Indonesia_COG.tif');
+      var arrayBuffer = await response.arrayBuffer();
+      var georaster = await parseGeoraster(arrayBuffer);
+
+      cogMin = georaster.mins[0];
+      cogMax = georaster.maxs[0];
+      var noDataValue = georaster.noDataValue;
+
+      cogLayer = new GeoRasterLayer({
+        georaster: georaster,
+        opacity: opacity,
+        resolution: 256,
+        pixelValuesToColorFn: function(values) {
+          var v = values[0];
+          if (v === noDataValue || v === null || v === undefined || isNaN(v)) return null;
+          var t = Math.max(0, Math.min(1, (v - cogMin) / (cogMax - cogMin)));
+          var rgb = droughtColor(t);
+          return 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',1)';
+        }
+      });
+      cogLayer.addTo(map);
+
+      if (cb) {
+        cb.style.display = 'block';
+        var sub = document.getElementById('cb-sub');
+        if (sub) sub.textContent = 'Cloud Optimized GeoTIFF · Bahaya Gempa';
+        drawCB(cogMin, cogMax);
+      }
+      Object.values(markerMap).forEach(function(m) {
+        if (m && m.setZIndexOffset) m.setZIndexOffset(1000);
+      });
+    } catch(e) {
+      console.error('Gagal memuat COG:', e);
+      if (cb) cb.style.display = 'none';
+    }
+  }
+
+  function removeCOG() {
+    if (cogLayer) { map.removeLayer(cogLayer); cogLayer = null; }
+    var cb = document.getElementById('irad-cb');
+    if (cb) cb.style.display = 'none';
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    loadCOG();
+
+    var offBtn = document.getElementById('irad-off-btn');
+    var cogVisible = true;
+    if (offBtn) offBtn.addEventListener('click', function(){
+      if (cogVisible) { removeCOG(); cogVisible = false; }
+      else { loadCOG(); cogVisible = true; }
+    });
+
+    window.symColor = 'color';
+    function setSymMode(mode) {
+      window.symColor = mode;
+      document.querySelectorAll('.smode-btn').forEach(function(b){
+        b.classList.toggle('active', b.id === 'smode-' + mode);
+      });
+      WADUK.forEach(function(d) {
+        var m = markerMap[d.kode];
+        if (!m) return;
+        var rc  = REGIONS[d.region];
+        var col = (mode === 'black') ? '#333333' : (rc ? rc.color : '#888');
+        m.setIcon(makeIcon(d.status, col, false));
+      });
+    }
+    var smcBtn = document.getElementById('smode-color');
+    var smbBtn = document.getElementById('smode-black');
+    if (smcBtn) smcBtn.addEventListener('click', function(){ setSymMode('color'); });
+    if (smbBtn) smbBtn.addEventListener('click', function(){ setSymMode('black'); });
+
+    var opRange = document.getElementById('iop-range');
+    if (opRange) {
+      opRange.addEventListener('input', function() {
+        opacity = this.value/100;
+        var val = document.getElementById('iop-val');
+        if (val) val.textContent = this.value + '%';
+        applyOpacity();
+      });
+    }
+  });
+})(); // end IIFE
+
+</script>
+
+<!-- ── EXPORT IRADIASI MODAL ──────────────────────────────────── -->
+<div id="irad-export-modal">
+  <div id="irad-export-box">
+    <div id="irad-exp-top">
+      <h2>Export Peta Bahaya Gempa <span id="irad-exp-season-lbl">Musim Basah (DJF)</span></h2>
+      <button id="irad-exp-close">&#x2715;</button>
+    </div>
+    <div id="irad-exp-body">
+      <div id="irad-exp-sheet">
+        <div id="irad-exp-mapwrap">
+          <div id="irad-exp-map"></div>
+        </div>
+        <div id="irad-exp-footer">
+          <div class="ef-left">
+            <div class="ef-title">Peta Bahaya Gempa Indonesia</div>
+            <div class="ef-sub" id="irad-exp-sub">Musim Basah (DJF) · Rata-rata Des–Jan–Feb · Komposit 10 Tahun</div>
+          </div>
+          <div id="irad-exp-cb-wrap">
+            <div id="irad-exp-cb-title">Indeks Bahaya Gempa</div>
+            <canvas id="irad-exp-grad" height="10"></canvas>
+            <div id="irad-exp-ticks">
+              <span id="iet0">—</span><span id="iet1">—</span>
+              <span id="iet2">—</span><span id="iet3">—</span><span id="iet4">—</span>
+            </div>
+          </div>
+          <div id="irad-exp-leg">
+            <!-- Diisi JS -->
+          </div>
+          <div id="irad-exp-source">
+            Sumber: COG GeoTIFF<br>
+            Band 1: Bahaya Gempa<br>
+            PLN · RUPTL 2025–2034
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="irad-exp-actions">
+      <button id="btn-irad-dl">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download PNG
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── EXPORT PETA IRADIASI ──────────────────────────────────────────────────────
+
+(function(){
+  var iExpMap     = null;
+  var iExpMarkers = [];
+
+  // Blue-red colormap for export
+  function droughtColorExport(t) {
+    var r, g, b;
+    if (t < 0.25) {
+      var s = t / 0.25;
+      r = Math.round(0 + s * 50); g = Math.round(0 + s * 100); b = Math.round(180 + s * 75);
+    } else if (t < 0.5) {
+      var s = (t - 0.25) / 0.25;
+      r = Math.round(50 + s * 50); g = Math.round(100 + s * 155); b = Math.round(255 - s * 55);
+    } else if (t < 0.75) {
+      var s = (t - 0.5) / 0.25;
+      r = Math.round(100 + s * 155); g = Math.round(255 - s * 100); b = Math.round(200 - s * 180);
+    } else {
+      var s = (t - 0.75) / 0.25;
+      r = 255; g = Math.round(155 - s * 155); b = Math.round(20 - s * 20);
+    }
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+
+  function drawExpCB(mn,mx){
+    var cv=document.getElementById('irad-exp-grad');
+    if(!cv)return;
+    var w=cv.parentElement.clientWidth||240;
+    cv.width=w; cv.height=10;
+    var ctx=cv.getContext('2d');
+    for(var x=0;x<w;x++){ctx.fillStyle=droughtColorExport(x/(w-1));ctx.fillRect(x,0,1,10);}
+    var ids=['iet0','iet1','iet2','iet3','iet4'];
+    ids.forEach(function(id,i){
+      var el=document.getElementById(id);
+      if(el)el.textContent=(mn+(mx-mn)*i/4).toFixed(1);
+    });
+  }
+
+  var REGION_COLORS = {
+    sumatera:   {label:'Sumatera',   color:'#1B6CA8'},
+    jamali:     {label:'Jamali',     color:'#1E8449'},
+    kalimantan: {label:'Kalimantan', color:'#6B3FA0'},
+    sulawesi:   {label:'Sulawesi',   color:'#C0392B'},
+    mapana:     {label:'Mapana',     color:'#D4880D'},
+  };
+
+  var STATUS_LEG = [
+    {key:'Selesai',   label:'Selesai'},
+    {key:'Eksisting', label:'Eksisting'},
+    {key:'On Going',  label:'On Going'},
+    {key:'Baru',      label:'Baru'},
+  ];
+
+  function buildExpLegend(useBlack){
+    var wrap = document.getElementById('irad-exp-leg');
+    if(!wrap) return;
+    var html = '<div id="irad-exp-leg-title">Legenda Titik</div>';
+    html += '<div class="iel-section"><div class="iel-lbl">Status</div>';
+    var demoColor = useBlack ? '#2d2d2d' : '#555';
+    html += '<div class="iel-items">';
+    STATUS_LEG.forEach(function(s){
+      html += '<div class="iel-row">' + markerSvg(s.key, demoColor, 11) + '<span>' + s.label + '</span></div>';
+    });
+    html += '</div></div>';
+    if(!useBlack){
+      html += '<div class="iel-section"><div class="iel-lbl">Wilayah</div><div class="iel-items">';
+      Object.values(REGION_COLORS).forEach(function(r){
+        html += '<div class="iel-row"><svg width="10" height="10"><circle cx="5" cy="5" r="4.5" fill="' + r.color + '"/></svg><span>' + r.label + '</span></div>';
+      });
+      html += '</div></div>';
+    }
+    wrap.innerHTML = html;
+  }
+
+  function openModal(){
+    var modal=document.getElementById('irad-export-modal');
+    if(!modal)return;
+    modal.classList.add('open');
+
+    var lbl=document.getElementById('irad-exp-season-lbl');
+    if(lbl)lbl.textContent='Bahaya Gempa (COG)';
+    var sub=document.getElementById('irad-exp-sub');
+    if(sub)sub.textContent='Bahaya Gempa · Cloud Optimized GeoTIFF';
+
+    setTimeout(async function(){
+      if(!iExpMap){
+        iExpMap=L.map('irad-exp-map',{
+          zoomControl:false,attributionControl:false,
+          zoomSnap:0.1, zoomDelta:0.5
+        });
+      }
+      iExpMap.eachLayer(function(l){ if(l._url||l._mutant) iExpMap.removeLayer(l); });
+      var bmKey = (typeof activeBmKey !== 'undefined') ? activeBmKey : 'esri-street';
+      if(basemaps && basemaps[bmKey]){
+        var src = basemaps[bmKey];
+        L.tileLayer(src._url, src.options).addTo(iExpMap);
+      } else {
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+          {attribution:'Esri',maxZoom:19}).addTo(iExpMap);
+      }
+      iExpMap.invalidateSize();
+      var idBounds = L.latLngBounds(L.latLng(-11,95), L.latLng(6,141));
+      iExpMap.fitBounds(idBounds, {padding:[20,20]});
+
+      // Load COG for export map
+      try {
+        var response = await fetch('Gempa_Indonesia_COG.tif');
+        var arrayBuffer = await response.arrayBuffer();
+        var georaster = await parseGeoraster(arrayBuffer);
+        var expCogLayer = new GeoRasterLayer({
+          georaster: georaster,
+          opacity: 0.9,
+          resolution: 256,
+          pixelValuesToColorFn: function(values) {
+            var v = values[0];
+            if (v === georaster.noDataValue || v === null || v === undefined || isNaN(v)) return null;
+            var t = Math.max(0, Math.min(1, (v - georaster.mins[0]) / (georaster.maxs[0] - georaster.mins[0])));
+            var rgb = [0,0,0];
+            if (t < 0.25) { var s=t/0.25; rgb=[Math.round(s*50),Math.round(s*100),Math.round(180+s*75)]; }
+            else if (t < 0.5) { var s=(t-0.25)/0.25; rgb=[Math.round(50+s*50),Math.round(100+s*155),Math.round(255-s*55)]; }
+            else if (t < 0.75) { var s=(t-0.5)/0.25; rgb=[Math.round(100+s*155),Math.round(255-s*100),Math.round(200-s*180)]; }
+            else { var s=(t-0.75)/0.25; rgb=[255,Math.round(155-s*155),Math.round(20-s*20)]; }
+            return 'rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+',1)';
+          }
+        });
+        expCogLayer.addTo(iExpMap);
+        drawExpCB(georaster.mins[0], georaster.maxs[0]);
+      } catch(e) {
+        console.error('Gagal memuat COG untuk export:', e);
+      }
+
+      if(iExpMarkers){ iExpMarkers.forEach(function(m){ iExpMap.removeLayer(m); }); }
+      iExpMarkers = [];
+      var useBlack = (window.symColor === 'black');
+      if(typeof WADUK !== 'undefined' && typeof REGIONS !== 'undefined'){
+        WADUK.forEach(function(d){
+          var rc  = REGIONS[d.region];
+          var col = useBlack ? '#2d2d2d' : (rc ? rc.color : '#888');
+          var sz  = 8, h = sz/2;
+          var icon = L.divIcon({
+            html: markerSvg(d.status, col, sz),
+            className:'', iconSize:[sz,sz], iconAnchor:[h,h]
+          });
+          var m = L.marker([d.lat, d.lon], {icon:icon, interactive:false});
+          m.addTo(iExpMap);
+          iExpMarkers.push(m);
+        });
+      }
+      buildExpLegend(useBlack);
+    },300);
+  }
+
+  document.addEventListener('DOMContentLoaded',function(){
+    var ob=document.getElementById('btn-irad-export');
+    if(ob)ob.addEventListener('click',openModal);
+    var cb=document.getElementById('irad-exp-close');
+    if(cb)cb.addEventListener('click',function(){
+      document.getElementById('irad-export-modal').classList.remove('open');
+    });
+    var modal=document.getElementById('irad-export-modal');
+    if(modal)modal.addEventListener('click',function(e){
+      if(e.target===modal)modal.classList.remove('open');
+    });
+    var dl=document.getElementById('btn-irad-dl');
+    if(dl)dl.addEventListener('click',function(){
+      var sheet=document.getElementById('irad-exp-sheet');
+      if(!sheet||typeof html2canvas==='undefined'){alert('html2canvas tidak ditemukan');return;}
+      var orig=dl.innerHTML;
+      dl.textContent='Memproses...';
+      setTimeout(function(){
+        html2canvas(sheet,{
+          scale:2,useCORS:true,allowTaint:true,
+          logging:false,backgroundColor:'#ffffff'
+        }).then(function(cv){
+          var a=document.createElement('a');
+          a.download='peta_bahaya_Gempa.png';
+          a.href=cv.toDataURL('image/png');
+          a.click();
+          dl.innerHTML=orig;
+        }).catch(function(){dl.innerHTML=orig;});
+      },600);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
